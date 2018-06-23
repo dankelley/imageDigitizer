@@ -1,13 +1,12 @@
 ## vim:textwidth=128:expandtab:shiftwidth=2:softtabstop=2
 
 library(shiny)
-
 library(png)
 
 ## options(shiny.error=browser)
 
 ui <- fluidPage(h5("imager 0.1"),
-                fluidRow(column(1, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
+                fluidRow(column(2, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
                          column(4, sliderInput("rotate", h5("Rotate [deg]"), min=-10, max=10, value=0, step=0.2),
                                 offset=3),
                          column(1, radioButtons("grid", label=h5("Grid"),
@@ -33,13 +32,13 @@ server <- function(input, output)
   xAxisModal <- function(failed=FALSE)
   {
     modalDialog(textInput("xAxisValue", "Enter X at last mouse click"),
-                footer=tagList(modalButton("Cancel"), actionButton("xAxisButtonOk", "OK")))
+                       footer=tagList(modalButton("Cancel"), actionButton("xAxisButtonOk", "OK")))
   }
 
   yAxisModal <- function(failed=FALSE)
   {
     modalDialog(textInput("yAxisValue", "Enter Y at last mouse click"),
-                footer=tagList(modalButton("Cancel"), actionButton("yAxisButtonOk", "OK")))
+                       footer=tagList(modalButton("Cancel"), actionButton("yAxisButtonOk", "OK")))
   }
 
   output$plot <- renderPlot({
@@ -175,4 +174,12 @@ server <- function(input, output)
   })
 }
 
-shinyApp(ui, server) #options=list(test.mode=TRUE))
+#' imager
+#'
+#' A shiny graphical user interface (GUI) for digitizing points in images, by
+#' means of mouse clicks. The GUI is meant to be reasonably self-explanatory.
+imager <- function()
+{
+  shinyApp(ui, server) #options=list(test.mode=TRUE))
+}
+

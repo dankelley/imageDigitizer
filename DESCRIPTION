@@ -1,0 +1,17 @@
+Package: imager
+Type: Package
+Title: Mouse-based image digitizer
+Version: 0.1.1
+Authors@R: c(
+    person(given="Dan", family="Kelley", email="Dan.Kelley@Dal.Ca", role=c("aut", "cre"), comment=c(ORCID="https://orcid.org/0000-0001-7808-5911")))
+Maintainer: Dan Kelley <Dan.Kelley@Dal.Ca>
+Depends: R (>= 2.15)
+License: GPL (>= 2)
+BugReports: https://github.com/dankelley/imager/issues
+Description: An R shiny app to digitize points in an image, using mouse clicks.
+Encoding: UTF-8
+LazyData: false
+Requires: shiny, png
+NeedsCompilation: no
+RoxygenNote: 6.0.1
+Imports: shiny, png

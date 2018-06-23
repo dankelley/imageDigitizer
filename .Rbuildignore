@@ -1,0 +1,7 @@
+test.imager
+test.png
+testr.png
+^.*\.Rproj$
+^\.Rproj\.user$
+imager.Rproj
+.Rbuildignore
