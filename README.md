@@ -24,5 +24,7 @@ is contained in a PNG image. Here's how to get started:
        "Undo" button to correct the last point, or set of points.
     8. When you've digitized all the points of interest, click on the "Save"
        button, which saves to a text file with the name name as the image file,
-       except that the suffix `.png` is switched to `_imager.dat`.
+       except that the suffix `.png` is switched to `_imager.dat`. A header in
+       the output file explains the data format and summarizes the mapping from
+       pixel location to x-y value.
 
