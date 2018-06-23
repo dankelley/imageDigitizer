@@ -62,11 +62,11 @@ server <- function(input, output)
       if (input$guides == "On") {
         if (length(state$xaxis$user)) {
           abline(v=state$xaxis$device, col='blue')
-          mtext(state$xaxis$user, side=1, col='blue', at=state$xaxis$device, line=-1)
+          mtext(state$xaxis$user, side=1, col='blue', at=state$xaxis$device, line=0)
         }
         if (length(state$yaxis$user)) {
           abline(h=state$yaxis$device, col='blue')
-          mtext(state$yaxis$user, side=2, col='blue', at=state$yaxis$device, line=-1)
+          mtext(state$yaxis$user, side=2, col='blue', at=state$yaxis$device, line=0)
         }
       }
       if (length(state$x$device)) {
@@ -98,6 +98,7 @@ server <- function(input, output)
                              i, state$x$device[i], state$y$device[i], xuser[i], yuser[i]),
                      file=file, append=TRUE)
                }
+               showNotification(paste0("File '", file, "' saved"))
   })
 
   observeEvent(input$plotHover, {

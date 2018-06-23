@@ -3,7 +3,8 @@ importFrom("graphics", "abline", "box", "mtext", "par", "plot",
 importFrom("png", "readPNG")
 importFrom("shiny", "actionButton", "modalButton", "modalDialog",
         "observeEvent", "p", "reactiveValues", "removeModal", "renderPlot",
-        "renderText", "shinyApp", "showModal", "tagList", "textInput")
+        "renderText", "shinyApp", "showModal", "showNotification",
+        "tagList", "textInput")
 importFrom("stats", "lm", "predict")
 importFrom("utils", "head")
 

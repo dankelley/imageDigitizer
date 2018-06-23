@@ -28,14 +28,14 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
 A sample screenshot is shown below. The purpose is to trace the outline of a
-schematic side-view of a Right Whale (*Eubalaena glacialis*).
+schematic side-view of a Right Whale (*Eubalaena glacialis*), taken from Daoust
+*et al.* (2018).
 
-There is no axis in this case, so at the stage of viewing, a scale has been set
+There is no axis in this case, so at the stage of viewing, a scale had been set
 by clicking on four points on the background grid. A coarse grid setting is
 used, to make it easier to count. It makes sense to define axes over a broad
 expanse of the plot, so that mouse-click errors are made smaller, relative to
-the domain size.  The axes can be seen with the blue guiding lines (the '7' on
-the y axis is a bit difficult to make out).
+the domain size.  The axes can be seen with the blue guiding lines.
 
 At the stage of the snapshot, 10 data points have been clicked, and are visible
 as red dots. Any point clicked in error can be eliminated by clicking the Undo
@@ -46,4 +46,12 @@ be required.)
 
 
 ![A sample screenshot showing the use of imager on an image of a Right Whale.](screenshot.png)
+
+**References**
+
+Daoust, Pierre-Yves, Émilie L. Couture, Tonya Wimmer, and Laura Bourque.
+“Incident Report. North Atlantic Right Whale Mortality Event in the Gulf of St.
+Lawrence, 2017.” Canadian Wildlife Health Cooperative, Marine Animal Response
+Socieity, and Fisheries and Oceans Canada, 2018.
+http://publications.gc.ca/site/eng/9.850838/publication.html.
 
