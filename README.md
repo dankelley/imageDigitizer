@@ -3,7 +3,8 @@ is contained in a PNG image. Here's how to get started:
 
 1. Copy a `.png` file here. It should contain a graph that uses linear axes.
 
-2. Launch RStudio and open the `imager.R` file.
+2. Launch RStudio and open the `imager.R` file, or type `runApp("imager.R")` in
+   an R console.
 
 3. Follow the directions you see in the control panels. In summary, the steps
    are as follows:
