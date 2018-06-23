@@ -1,0 +1,13 @@
+library(pracma)
+xy <- read.table("whale.imager", skip=6)
+x <- xy$V4 * 10 # typed wrong scale
+y <- xy$V5
+L <- diff(range(x)) # scale by L
+xx <- x / L
+yy <- y / L
+plot(xx, yy, asp=1, type='n', xlab="x/L", ylab="y/L")
+polygon(xx, yy,  col="gray")
+grid(col=4)
+area <- -polyarea(xx, yy)
+mtext(sprintf("Area=%.2f L^2", area), side=3)
+# [1] 2.705064
