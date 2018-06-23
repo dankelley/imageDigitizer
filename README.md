@@ -16,7 +16,12 @@ is contained in a PNG image. Here's how to get started:
        digitizing an image that has no plotted scale. It is not important that
        you get the y value correct in this; only the x value is used.
     4. A dialog box will open, asking you to type in the numerical value at this
-       point on the x axis.
+       point on the x axis. At this time, a blue guideline will appear on the
+       image, with blue text below it to indicating the value. These guidelines
+       can be turned off with a radio button, but it is usually helpful to
+       keep them on while setting up the axes, to avoid digitizing a whole
+       image, only to find odd results at the end because you made a mistake
+       in setting up the axes.
     5. Repeat the two previous steps for a second point on the x axis.
     6. Repeat the three previous steps for two points on the y axis.
     7. Now it's time to digitize data in the graph. Do this by clicking on

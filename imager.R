@@ -13,6 +13,9 @@ ui <- fluidPage(h5("imager 0.1"),
                          column(1, radioButtons("grid", label=h5("Grid"),
                                                 choices=c("Off"="off", "Fine"="fine", "Medium"="medium", "Coarse"="coarse"),
                                                 selected="medium", inline=TRUE)),
+                         column(1, radioButtons("guides", label=h5("Axis guides"),
+                                                choices=c("on"="On", "off"="Off"),
+                                                selected="On", inline=TRUE)),
                          column(1, actionButton("undo", "Undo")),
                          column(1, actionButton("save", "Save results"))),
                 fluidRow(column(2, htmlOutput("status")),
@@ -40,9 +43,10 @@ server <- function(input, output)
   }
 
   output$plot <- renderPlot({
-    par(mar=rep(0, 4))
+    par(mar=rep(1, 4))
     asp <- dim(p)[1] / dim(p)[2]
-    plot(0:1, 0:1, type='n', asp=asp, xaxs="i", yaxs="i")
+    plot(0:1, 0:1, type='n', asp=asp, xaxs="i", yaxs="i", axes=FALSE)
+    box()
     if (is.null(state$image)) {
       text(0.2, 0.5, "No .png file has been selected yet.")
     } else {
@@ -56,6 +60,16 @@ server <- function(input, output)
       } else if (input$grid == "coarse") {
         abline(h=seq(-3, 3, 0.2), col='magenta', lty="dotted")
         abline(v=seq(-3, 3, 0.2*asp), col='magenta', lty="dotted")
+      }
+      if (input$guides == "On") {
+        if (length(state$xaxis$user)) {
+          abline(v=state$xaxis$device, col='blue')
+          mtext(state$xaxis$user, side=1, col='blue', at=state$xaxis$device, line=-1)
+        }
+        if (length(state$yaxis$user)) {
+          abline(h=state$yaxis$device, col='blue')
+          mtext(state$yaxis$user, side=2, col='blue', at=state$yaxis$device, line=-1)
+        }
       }
       if (length(state$x$device)) {
         points(state$x$device, state$y$device, pch=20, col="red")
