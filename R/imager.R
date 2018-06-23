@@ -6,15 +6,14 @@ library(png)
 ## options(shiny.error=browser)
 
 ui <- fluidPage(h5("imager 0.1"),
-                fluidRow(column(2, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
-                         column(4, sliderInput("rotate", h5("Rotate [deg]"), min=-10, max=10, value=0, step=0.2),
-                                offset=3),
+                fluidRow(column(3, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
+                         column(3, sliderInput("rotate", h5("Rotate [deg]"), min=-10, max=10, value=0, step=0.2)),
                          column(1, radioButtons("grid", label=h5("Grid"),
-                                                choices=c("Off"="off", "Fine"="fine", "Medium"="medium", "Coarse"="coarse"),
-                                                selected="medium", inline=TRUE)),
+                                                  choices=c("None"="off", "Fine"="fine", "Medium"="medium", "Coarse"="coarse"),
+                                                  selected="medium", inline=TRUE)),
                          column(1, radioButtons("guides", label=h5("Axis guides"),
-                                                choices=c("on"="On", "off"="Off"),
-                                                selected="On", inline=TRUE)),
+                                                  choices=c("on"="On", "off"="Off"),
+                                                  selected="On", inline=TRUE)),
                          column(1, actionButton("undo", "Undo")),
                          column(1, actionButton("save", "Save results"))),
                 fluidRow(column(2, htmlOutput("status")),
@@ -32,18 +31,18 @@ server <- function(input, output)
   xAxisModal <- function(failed=FALSE)
   {
     modalDialog(textInput("xAxisValue", "Enter X at last mouse click"),
-                       footer=tagList(modalButton("Cancel"), actionButton("xAxisButtonOk", "OK")))
+                footer=tagList(modalButton("Cancel"), actionButton("xAxisButtonOk", "OK")))
   }
 
   yAxisModal <- function(failed=FALSE)
   {
     modalDialog(textInput("yAxisValue", "Enter Y at last mouse click"),
-                       footer=tagList(modalButton("Cancel"), actionButton("yAxisButtonOk", "OK")))
+                footer=tagList(modalButton("Cancel"), actionButton("yAxisButtonOk", "OK")))
   }
 
   output$plot <- renderPlot({
     par(mar=rep(1, 4))
-    asp <- dim(p)[1] / dim(p)[2]
+    asp <- if (is.null(state$image)) 1 else dim(state$image)[1] / dim(state$image)[2]
     plot(0:1, 0:1, type='n', asp=asp, xaxs="i", yaxs="i", axes=FALSE)
     box()
     if (is.null(state$image)) {
@@ -91,7 +90,7 @@ server <- function(input, output)
                cat(paste("# x axis user: ", paste(state$xaxis$user, collapse=" "), "\n"), file=file, append=TRUE)
                cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n"), file=file, append=TRUE)
                cat(paste("# y axis user: ", paste(state$yaxis$user, collapse=" "), "\n"), file=file, append=TRUE)
-               cat("# i devicex devicey userx usery\n", file=file)
+               cat("# i devicex devicey userx usery\n", file=file, append=TRUE)
                xuser <- predict(state$xaxisModel, data.frame(device=state$x$device))
                yuser <- predict(state$yaxisModel, data.frame(device=state$y$device))
                for (i in seq_along(state$x$device)) {
