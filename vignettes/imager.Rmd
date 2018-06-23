@@ -1,0 +1,49 @@
+---
+title: "Using imager"
+author: "Dan Kelley"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    number_sections: true
+    fig_caption: yes
+    fig_width: 5
+    fig_height: 5
+    dpi: 72
+    dev.args: list(pointsize=11)
+vignette: >
+  %\VignetteIndexEntry{Using imager}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+<!-- HOW TO BUILD THE VIGNETTE. -->
+<!-- 1. edit this file in vignettes/imager.Rmd -->
+<!-- 2. run devtools::build_vignettes() -->
+<!-- 3. build imager -->
+
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+A sample screenshot is shown below. The purpose is to trace the outline of a
+schematic side-view of a Right Whale (*Eubalaena glacialis*).
+
+There is no axis in this case, so at the stage of viewing, a scale has been set
+by clicking on four points on the background grid. A coarse grid setting is
+used, to make it easier to count. It makes sense to define axes over a broad
+expanse of the plot, so that mouse-click errors are made smaller, relative to
+the domain size.  The axes can be seen with the blue guiding lines (the '7' on
+the y axis is a bit difficult to make out).
+
+At the stage of the snapshot, 10 data points have been clicked, and are visible
+as red dots. Any point clicked in error can be eliminated by clicking the Undo
+button, which removes the most recently added point. (Actually, Undo will
+remove all the points, if the user clicks enough, but it a good idea to keep a
+close eye on the digitized points, so that only single-point corrections will
+be required.)
+
+
+![A sample screenshot showing the use of imager on an image of a Right Whale.](screenshot.png)
+

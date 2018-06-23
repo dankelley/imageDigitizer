@@ -6,3 +6,4 @@
 *.imager
 *~
 .Rapp.history
+.DS_Store
