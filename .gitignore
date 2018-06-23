@@ -1,5 +1,7 @@
+*.pdf
 *.swp
 .Rproj.user
 .Rhistory
 .RData
 *.imager
+*~
