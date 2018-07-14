@@ -2,6 +2,7 @@ Package: imager
 Type: Package
 Title: Mouse-based image digitizer
 Version: 0.1.1
+Date: 2018-07-14
 Authors@R: c(
     person(given="Dan", family="Kelley", email="Dan.Kelley@Dal.Ca", role=c("aut", "cre"), comment=c(ORCID="https://orcid.org/0000-0001-7808-5911")))
 Maintainer: Dan Kelley <Dan.Kelley@Dal.Ca>
