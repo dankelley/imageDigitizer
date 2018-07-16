@@ -4,8 +4,9 @@ library(shiny)
 library(png)
 
 ## options(shiny.error=browser)
+version <- "0.1.2"
 
-ui <- fluidPage(h5("imager 0.1"),
+ui <- fluidPage(h5(paste("imager", version)),
                 fluidRow(column(3, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
                          column(3, sliderInput("rotate", h5("Rotate [deg]"), min=-10, max=10, value=0, step=0.2)),
                          column(1, radioButtons("grid", label=h5("Grid"),
@@ -84,13 +85,14 @@ server <- function(input, output)
 
   observeEvent(input$save, {
                file <- paste(gsub(".png$", "", state$inputFile$name), "_imager.dat", sep="")
-               cat(paste("# file:", state$inputFile$name, "\n"), file=file)
-               cat(paste("# rotation: ", state$rotate, "\n"), file=file, append=TRUE)
-               cat(paste("# x axis device: ", paste(state$xaxis$device, collapse=" "), "\n"), file=file, append=TRUE)
-               cat(paste("# x axis user: ", paste(state$xaxis$user, collapse=" "), "\n"), file=file, append=TRUE)
-               cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n"), file=file, append=TRUE)
-               cat(paste("# y axis user: ", paste(state$yaxis$user, collapse=" "), "\n"), file=file, append=TRUE)
-               cat("# i devicex devicey userx usery\n", file=file, append=TRUE)
+               cat(paste("# imager version ", version, "\n", sep=""), file=file)
+               cat(paste("# file:", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
+               cat(paste("# rotation: ", state$rotate, "\n", sep=""), file=file, append=TRUE)
+               cat(paste("# x axis device: ", paste(state$xaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+               cat(paste("# x axis user: ", paste(state$xaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+               cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+               cat(paste("# y axis user: ", paste(state$yaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+               cat("i devicex devicey userx usery\n", file=file, append=TRUE)
                xuser <- predict(state$xaxisModel, data.frame(device=state$x$device))
                yuser <- predict(state$yaxisModel, data.frame(device=state$y$device))
                for (i in seq_along(state$x$device)) {
