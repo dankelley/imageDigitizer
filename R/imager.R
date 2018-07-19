@@ -4,41 +4,55 @@ library(shiny)
 library(png)
 
 ## options(shiny.error=browser)
-version <- "0.1.2"
+version <- "0.1.3"
 
 ui <- fluidPage(h5(paste("imager", version)),
-                fluidRow(column(3, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
-                         column(3, sliderInput("rotate", h5("Rotate [deg]"), min=-10, max=10, value=0, step=0.2)),
-                         column(1, radioButtons("grid", label=h5("Grid"),
+                fluidRow(column(4, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
+                         column(3, textInput("xname", h5("Name horiz. axis"))),
+                         column(3, textInput("yname", h5("Name vert. axis")))),
+                fluidRow(column(3, sliderInput("rotate", h5("Rotate [deg]"), min=-10, max=10, value=0, step=0.2)),
+                         column(2, radioButtons("grid", label=h5("Grid"),
                                                   choices=c("None"="off", "Fine"="fine", "Medium"="medium", "Coarse"="coarse"),
                                                   selected="medium", inline=TRUE)),
-                         column(1, radioButtons("guides", label=h5("Axis guides"),
+                         column(2, radioButtons("guides", label=h5("Axis guides"),
                                                   choices=c("on"="On", "off"="Off"),
                                                   selected="On", inline=TRUE)),
-                         column(1, actionButton("undo", "Undo")),
-                         column(1, actionButton("save", "Save results"))),
+                         column(2, actionButton("undo", "Undo")),
+                         column(2, actionButton("save", "Save results"))),
                 fluidRow(column(2, htmlOutput("status")),
                          column(10, plotOutput("plot", click="plotClick", hover="plotHover", height=600)))
                 )
 
 server <- function(input, output)
 {
-  state <- reactiveValues(rotate=0, inputFile=NULL, image=NULL, step=1,
-                          x=list(device=NULL), y=list(device=NULL),
-                          xaxis=list(user=NULL, device=NULL), yaxis=list(user=NULL, device=NULL),
+  state <- reactiveValues(step=1, rotate=0, inputFile=NULL, image=NULL,
+                          xname="x", yname="x",
+                          x=list(device=NULL),
+                          y=list(device=NULL),
+                          xaxis=list(user=NULL, device=NULL),
+                          yaxis=list(user=NULL, device=NULL),
                           xaxisModel=NULL, yaxisModel=NULL,
                           xhover=NULL, yhover=NULL)
 
   xAxisModal <- function(failed=FALSE)
   {
-    modalDialog(textInput("xAxisValue", "Enter X at last mouse click"),
+    modalDialog(textInput("xAxisValue", "Enter x at last mouse click"),
                 footer=tagList(modalButton("Cancel"), actionButton("xAxisButtonOk", "OK")))
   }
-
+  xAxisNameModal <- function(failed=FALSE)
+  {
+    modalDialog(textInput("xAxisName", "Enter name of x axis"),
+                footer=tagList(modalButton("Cancel"), actionButton("xAxisNameButtonOk", "OK")))
+  }
   yAxisModal <- function(failed=FALSE)
   {
-    modalDialog(textInput("yAxisValue", "Enter Y at last mouse click"),
+    modalDialog(textInput("yAxisValue", "Enter y at last mouse click"),
                 footer=tagList(modalButton("Cancel"), actionButton("yAxisButtonOk", "OK")))
+  }
+  yAxisNameModal <- function(failed=FALSE)
+  {
+    modalDialog(textInput("yAxisName", "Enter name of y axis"),
+                footer=tagList(modalButton("Cancel"), actionButton("yAxisNameButtonOk", "OK")))
   }
 
   output$plot <- renderPlot({
@@ -92,11 +106,11 @@ server <- function(input, output)
                cat(paste("# x axis user: ", paste(state$xaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
                cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
                cat(paste("# y axis user: ", paste(state$yaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-               cat("i devicex devicey userx usery\n", file=file, append=TRUE)
+               cat(sprintf("i,devicex,devicey,%s,%s\n", state$xname, state$yname), file=file, append=TRUE)
                xuser <- predict(state$xaxisModel, data.frame(device=state$x$device))
                yuser <- predict(state$yaxisModel, data.frame(device=state$y$device))
                for (i in seq_along(state$x$device)) {
-                 cat(sprintf("%3d %10.3f %10.3f %20g %20g\n",
+                 cat(sprintf("%3d,%10.3f,%10.3f,%20g,%20g\n",
                              i, state$x$device[i], state$y$device[i], xuser[i], yuser[i]),
                      file=file, append=TRUE)
                }
@@ -113,9 +127,13 @@ server <- function(input, output)
                  state$xaxis$device <- c(state$xaxis$device, input$plotClick$x)
                  showModal(xAxisModal())
                } else if (state$step == 3) {
+                 showModal(xAxisNameModal())
+               } else if (state$step == 4) {
                  state$yaxis$device <- c(state$yaxis$device, input$plotClick$y)
                  showModal(yAxisModal())
-               } else if (state$step == 4) {
+               } else if (state$step == 5) {
+                 showModal(yAxisNameModal())
+               } else if (state$step == 6) {
                  state$x$device <- c(state$x$device, input$plotClick$x)
                  state$y$device <- c(state$y$device, input$plotClick$y)
                } else {
@@ -135,14 +153,22 @@ server <- function(input, output)
       else
         return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 2B</b><br>Click a second known point on the X axis."))
     }
-    if (length(state$yaxis$device) != 2) {
+    if (is.null(state$xname)) {
       state$step <- 3
+      return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 2C</b><br>Enter name of x axis."))
+    }
+    if (length(state$yaxis$device) != 2) {
+      state$step <- 4
       if (length(state$yaxis$device) == 0)
         return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 3A</b><br>Click a known point on the Y axis."))
       else
         return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 3B</b><br>Click a second known point on the Y axis."))
     }
-    state$step <- 4
+    if (is.null(state$yname)) {
+      state$step <- 5
+      return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 3C</b><br>Enter name of y axis"))
+    }
+    state$step <- 6
     res <- paste("<b>", state$inputFile$name, "</b><br>", length(state$x$device), "points digitized")
     if (!is.null(state$xaxisModel) && !is.null(state$yaxisModel)) {
       xh <- predict(state$xaxisModel, data.frame(device=state$xhover))
@@ -161,19 +187,44 @@ server <- function(input, output)
                state$image <- readPNG(state$inputFile$datapath)
   })
 
+  observeEvent(input$xname, { state$xname <- input$xname} )
+
+  observeEvent(input$yname, { state$yname <- input$yname} )
+
   observeEvent(input$xAxisButtonOk, {
+               cat("AAAAAA\n")
                state$xaxis$user <- c(state$xaxis$user, as.numeric(input$xAxisValue))
-               if (length(state$xaxis$user) > 1)
+               cat("BBBBB next is state$xaxis:\n")
+               print(state$xaxis)
+               cat("about to do lm()...\n")
+               if (length(state$xaxis$user) > 1) {
                  state$xaxisModel <- lm(user ~ device, data=state$xaxis)
+                 state$step <- 3
+               }
+               cat("... did lm()\n")
+               removeModal()
+               cat("removed modal\n")
+  })
+
+  observeEvent(input$xAxisNameButtonOk, {
+               state$xname <- input$xAxisName
                removeModal()
   })
 
   observeEvent(input$yAxisButtonOk, {
                state$yaxis$user <- c(state$yaxis$user, as.numeric(input$yAxisValue))
-               if (length(state$yaxis$user) > 1)
+               if (length(state$yaxis$user) > 1) {
                  state$yaxisModel <- lm(user ~ device, data=state$yaxis)
+                 state$step <- 5
+               }
                removeModal()
   })
+
+  observeEvent(input$yAxisNameButtonOk, {
+               state$yname <- input$yAxisName
+               removeModal()
+  })
+
 }
 
 #' imager
