@@ -4,7 +4,7 @@ library(shiny)
 library(png)
 
 ## options(shiny.error=browser)
-version <- "0.1.3"
+version <- "0.1.4"
 
 ui <- fluidPage(h5(paste("imager", version)),
                 fluidRow(column(4, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
@@ -106,6 +106,10 @@ server <- function(input, output)
                cat(paste("# x axis user: ", paste(state$xaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
                cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
                cat(paste("# y axis user: ", paste(state$yaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+               if (nchar(state$xname) < 1)
+                 state$xname <- "x"
+               if (nchar(state$yname) < 1)
+                 state$yname <- "y"
                cat(sprintf("i,devicex,devicey,%s,%s\n", state$xname, state$yname), file=file, append=TRUE)
                xuser <- predict(state$xaxisModel, data.frame(device=state$x$device))
                yuser <- predict(state$yaxisModel, data.frame(device=state$y$device))
