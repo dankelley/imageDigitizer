@@ -6,6 +6,11 @@ library(png)
 ## options(shiny.error=browser)
 version <- "0.1.4"
 
+msg <- function(...)
+{
+  cat(file=stderr(), ...)
+}
+
 ui <- fluidPage(h5(paste("imager", version)),
                 fluidRow(column(4, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
                          column(3, textInput("xname", h5("Name horiz. axis"))),
@@ -196,18 +201,12 @@ server <- function(input, output)
   observeEvent(input$yname, { state$yname <- input$yname} )
 
   observeEvent(input$xAxisButtonOk, {
-               cat("AAAAAA\n")
                state$xaxis$user <- c(state$xaxis$user, as.numeric(input$xAxisValue))
-               cat("BBBBB next is state$xaxis:\n")
-               print(state$xaxis)
-               cat("about to do lm()...\n")
                if (length(state$xaxis$user) > 1) {
                  state$xaxisModel <- lm(user ~ device, data=state$xaxis)
                  state$step <- 3
                }
-               cat("... did lm()\n")
                removeModal()
-               cat("removed modal\n")
   })
 
   observeEvent(input$xAxisNameButtonOk, {
