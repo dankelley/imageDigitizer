@@ -264,6 +264,8 @@ server <- function(input, output)
   observeEvent(input$inputFile, {
                state$inputFile <- input$inputFile
                state$image <- readPNG(state$inputFile$datapath)
+               state$imageExists <- TRUE
+               msg("state$imageExists=", state$imageExists)
   })
 
   observeEvent(input$xname, { state$xname <- input$xname} )
@@ -304,6 +306,10 @@ server <- function(input, output)
   })
 
   outputOptions(output, "stage", suspendWhenHidden=FALSE)
+
+  output$readImage <- renderUI({
+    fileInput("inputFile", h5("Input file"), accept=c("image/png"))
+  })
 
 }
 
