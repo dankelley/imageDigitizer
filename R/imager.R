@@ -4,25 +4,47 @@ library(shiny)
 library(png)
 
 ## options(shiny.error=browser)
-version <- "0.1.4"
+debugFlag <- TRUE                      # For console messages that trace control flow.
+version <- "0.1.5"
+keypressHelp <- "
+<i>Keystroke interpretation</i>
+<ul>
+<li> '<b>+</b>': zoom in, centred on mouse location
+<li> '<b>-</b>': zoom out
+<li> '<b>0</b>': unzoom
+</ul>
+
+<i>Developer plans</i>
+<ul>
+<li> Allow single-scale (like for a map)
+<li> Zooming
+<li> Read analysis file
+</ul>
+
+"
 
 msg <- function(...)
 {
-  cat(file=stderr(), ...)
+  if (debugFlag)
+    cat(file=stderr(), ...)
 }
 
-ui <- fluidPage(h5(paste("imager", version)),
-                fluidRow(column(4, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
-                         column(3, textInput("xname", h5("Name horiz. axis"))),
+ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onInputChange("keypress", e.which); Shiny.onInputChange("keypressTrigger", Math.random()); });'),
+                h5(paste("imager", version)),
+                fluidRow(column(1, checkboxInput("debug", h6("Debug"), value=!FALSE)),
+                         conditionalPanel(condition="!output.imageExists",
+                                          column(4, uiOutput(outputI="readImage")))
+                         ),
+                fluidRow(column(3, textInput("xname", h5("Name horiz. axis"))),
                          column(3, textInput("yname", h5("Name vert. axis")))),
                 fluidRow(column(3, sliderInput("rotate", h5("Rotate [deg]"), min=-10, max=10, value=0, step=0.2)),
-                         column(2, radioButtons("grid", label=h5("Grid"),
+                         column(3, radioButtons("grid", label=h5("Grid"),
                                                   choices=c("None"="off", "Fine"="fine", "Medium"="medium", "Coarse"="coarse"),
                                                   selected="medium", inline=TRUE)),
                          column(2, radioButtons("guides", label=h5("Axis guides"),
                                                   choices=c("on"="On", "off"="Off"),
-                                                  selected="On", inline=TRUE)),
-                         column(2, actionButton("undo", "Undo")),
+                                                  selected="On", inline=TRUE))),
+                fluidRow(column(2, actionButton("undo", "Undo")),
                          column(2, actionButton("save", "Save results"))),
                 fluidRow(column(2, htmlOutput("status")),
                          column(10, plotOutput("plot", click="plotClick", hover="plotHover", height=600)))
@@ -30,7 +52,10 @@ ui <- fluidPage(h5(paste("imager", version)),
 
 server <- function(input, output)
 {
-  state <- reactiveValues(step=1, rotate=0, inputFile=NULL, image=NULL,
+  state <- reactiveValues(step=1, rotate=0,
+                          inputFile=NULL,
+                          image=NULL,
+                          imageExists=FALSE,
                           xname="x", yname="x",
                           x=list(device=NULL),
                           y=list(device=NULL),
@@ -38,6 +63,34 @@ server <- function(input, output)
                           yaxis=list(user=NULL, device=NULL),
                           xaxisModel=NULL, yaxisModel=NULL,
                           xhover=NULL, yhover=NULL)
+
+  observeEvent(input$debug,
+               {
+                 if (!is.null(input$debug))
+                   debugFlag <- input$debug
+               }
+  )
+
+  observeEvent(input$keypressTrigger,
+               {
+                 if (state$step == 6) {
+                   key <- intToUtf8(input$keypress)
+                   msg("keypress numerical value ", input$keypress, ", i.e. key='", key, "'\n", sep="")
+                   if (key == '+') {
+                     msg("should zoom in now\n")
+                   } else if (key == '-') {
+                     msg("should zoom out now\n")
+                   } else if (key == '0') {
+                     msg("should unzoom now\n")
+                   } else if (key == '?') {
+                     showModal(modalDialog(title="", HTML(keypressHelp), easyClose=TRUE))
+                   }
+                 }
+               }
+  )
+
+
+
 
   xAxisModal <- function(failed=FALSE)
   {
@@ -107,10 +160,12 @@ server <- function(input, output)
                cat(paste("# imager version ", version, "\n", sep=""), file=file)
                cat(paste("# file:", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
                cat(paste("# rotation: ", state$rotate, "\n", sep=""), file=file, append=TRUE)
-               cat(paste("# x axis device: ", paste(state$xaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-               cat(paste("# x axis user: ", paste(state$xaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-               cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-               cat(paste("# y axis user: ", paste(state$yaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+               if (length(state$xaxis$device)) {
+                 cat(paste("# x axis device: ", paste(state$xaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+                 cat(paste("# x axis user: ", paste(state$xaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+                 cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+                 cat(paste("# y axis user: ", paste(state$yaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+               }
                if (nchar(state$xname) < 1)
                  state$xname <- "x"
                if (nchar(state$yname) < 1)
@@ -175,7 +230,7 @@ server <- function(input, output)
     }
     if (is.null(state$yname)) {
       state$step <- 5
-      return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 3C</b><br>Enter name of y axis"))
+      return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 3C</b><br>Enter name of y axis."))
     }
     state$step <- 6
     res <- paste("<b>", state$inputFile$name, "</b><br>", length(state$x$device), "points digitized")
@@ -194,6 +249,8 @@ server <- function(input, output)
   observeEvent(input$inputFile, {
                state$inputFile <- input$inputFile
                state$image <- readPNG(state$inputFile$datapath)
+               state$imageExists <- TRUE
+               msg("state$imageExists=", state$imageExists)
   })
 
   observeEvent(input$xname, { state$xname <- input$xname} )
@@ -227,6 +284,16 @@ server <- function(input, output)
                state$yname <- input$yAxisName
                removeModal()
   })
+
+  output$imageExists <- reactive({
+    state$imageExists
+  })
+  outputOptions(output, "imageExists", suspendWhenHidden=FALSE)
+
+  output$readImage <- renderUI({
+    fileInput("inputFile", h5("Input file"), accept=c("image/png"))
+  })
+
 
 }
 
