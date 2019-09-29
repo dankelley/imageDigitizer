@@ -4,25 +4,47 @@ library(shiny)
 library(png)
 
 ## options(shiny.error=browser)
-version <- "0.1.4"
+debugFlag <- TRUE                      # For console messages that trace control flow.
+version <- "0.1.5"
+keypressHelp <- "
+<i>Keystroke interpretation</i>
+<ul>
+<li> '<b>+</b>': zoom in, centred on mouse location
+<li> '<b>-</b>': zoom out
+<li> '<b>0</b>': unzoom
+</ul>
+
+<i>Developer plans</i>
+<ul>
+<li> Allow single-scale (like for a map)
+<li> Zooming
+<li> Read analysis file
+</ul>
+
+"
 
 msg <- function(...)
 {
-  cat(file=stderr(), ...)
+  if (debugFlag)
+    cat(file=stderr(), ...)
 }
 
-ui <- fluidPage(h5(paste("imager", version)),
-                fluidRow(column(4, fileInput("inputFile", h5("Input file"), accept=c("image/png", ".png"))),
-                         column(3, textInput("xname", h5("Name horiz. axis"))),
-                         column(3, textInput("yname", h5("Name vert. axis")))),
-                fluidRow(column(3, sliderInput("rotate", h5("Rotate [deg]"), min=-10, max=10, value=0, step=0.2)),
-                         column(2, radioButtons("grid", label=h5("Grid"),
-                                                  choices=c("None"="off", "Fine"="fine", "Medium"="medium", "Coarse"="coarse"),
-                                                  selected="medium", inline=TRUE)),
-                         column(2, radioButtons("guides", label=h5("Axis guides"),
-                                                  choices=c("on"="On", "off"="Off"),
-                                                  selected="On", inline=TRUE)),
-                         column(2, actionButton("undo", "Undo")),
+ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onInputChange("keypress", e.which); Shiny.onInputChange("keypressTrigger", Math.random()); });'),
+                uiOutput(outputId="title"),
+                #h5(paste("imager", version)),
+                #fluidRow(column(1, checkboxInput("debug", h6("Debug"), value=!FALSE))),
+                fluidRow(conditionalPanel(condition="output.stage == 1",
+                                          column(3, uiOutput(outputId="readImage")),
+                                          column(3, sliderInput("rotate", h5("Rotate [deg]"),
+                                                                min=-10, max=10, value=0, step=0.2)),
+                                          column(3, radioButtons("grid", label=h5("Grid"),
+                                                                 choices=c("None"="off", "Fine"="fine", "Medium"="medium", "Coarse"="coarse"),
+                                                                 selected="medium", inline=TRUE)),
+                                          column(2, actionButton("stage1button", "Proceed to next stage")))),
+                fluidRow(conditionalPanel(condition="output.stage == 3",
+                                          column(3, textInput("xname", h5("Name horiz. axis"))),
+                                          column(3, textInput("yname", h5("Name vert. axis"))))),
+                fluidRow(column(2, actionButton("undo", "Undo")),
                          column(2, actionButton("save", "Save results"))),
                 fluidRow(column(2, htmlOutput("status")),
                          column(10, plotOutput("plot", click="plotClick", hover="plotHover", height=600)))
@@ -30,7 +52,11 @@ ui <- fluidPage(h5(paste("imager", version)),
 
 server <- function(input, output)
 {
-  state <- reactiveValues(step=1, rotate=0, inputFile=NULL, image=NULL,
+  state <- reactiveValues(step=1,
+                          stage=1,
+                          rotate=0,
+                          inputFile=NULL,
+                          image=NULL,
                           xname="x", yname="x",
                           x=list(device=NULL),
                           y=list(device=NULL),
@@ -38,6 +64,40 @@ server <- function(input, output)
                           yaxis=list(user=NULL, device=NULL),
                           xaxisModel=NULL, yaxisModel=NULL,
                           xhover=NULL, yhover=NULL)
+
+  observeEvent(input$stage1button,
+               {
+                 state$stage <- 2
+               }
+  )
+  
+#  observeEvent(input$debug,
+#               {
+#                 if (!is.null(input$debug))
+#                   debugFlag <- input$debug
+#               }
+#  )
+
+  observeEvent(input$keypressTrigger,
+               {
+                 if (state$step == 6) {
+                   key <- intToUtf8(input$keypress)
+                   msg("keypress numerical value ", input$keypress, ", i.e. key='", key, "'\n", sep="")
+                   if (key == '+') {
+                     msg("should zoom in now\n")
+                   } else if (key == '-') {
+                     msg("should zoom out now\n")
+                   } else if (key == '0') {
+                     msg("should unzoom now\n")
+                   } else if (key == '?') {
+                     showModal(modalDialog(title="", HTML(keypressHelp), easyClose=TRUE))
+                   }
+                 }
+               }
+  )
+
+
+
 
   xAxisModal <- function(failed=FALSE)
   {
@@ -60,6 +120,14 @@ server <- function(input, output)
                 footer=tagList(modalButton("Cancel"), actionButton("yAxisNameButtonOk", "OK")))
   }
 
+  output$title <- renderUI({
+    h5(paste0("imager ", version, ifelse(is.null(state$inputFile), "", paste0(" (", state$inputFile, ")")))) 
+  })
+
+  output$readImage <- renderUI({
+    fileInput("inputFile", h5("Input file"), accept=c("image/png"))
+  })
+
   output$plot <- renderPlot({
     par(mar=rep(1, 4))
     asp <- if (is.null(state$image)) 1 else dim(state$image)[1] / dim(state$image)[2]
@@ -79,16 +147,16 @@ server <- function(input, output)
         abline(h=seq(-3, 3, 0.2), col='magenta', lty="dotted")
         abline(v=seq(-3, 3, 0.2*asp), col='magenta', lty="dotted")
       }
-      if (input$guides == "On") {
-        if (length(state$xaxis$user)) {
-          abline(v=state$xaxis$device, col='blue')
-          mtext(state$xaxis$user, side=1, col='blue', at=state$xaxis$device, line=0)
-        }
-        if (length(state$yaxis$user)) {
-          abline(h=state$yaxis$device, col='blue')
-          mtext(state$yaxis$user, side=2, col='blue', at=state$yaxis$device, line=0)
-        }
-      }
+      ## if (input$guides == "On") {
+      ##   if (length(state$xaxis$user)) {
+      ##     abline(v=state$xaxis$device, col='blue')
+      ##     mtext(state$xaxis$user, side=1, col='blue', at=state$xaxis$device, line=0)
+      ##   }
+      ##   if (length(state$yaxis$user)) {
+      ##     abline(h=state$yaxis$device, col='blue')
+      ##     mtext(state$yaxis$user, side=2, col='blue', at=state$yaxis$device, line=0)
+      ##   }
+      ## }
       if (length(state$x$device)) {
         points(state$x$device, state$y$device, pch=20, col="red")
       }
@@ -107,10 +175,12 @@ server <- function(input, output)
                cat(paste("# imager version ", version, "\n", sep=""), file=file)
                cat(paste("# file:", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
                cat(paste("# rotation: ", state$rotate, "\n", sep=""), file=file, append=TRUE)
-               cat(paste("# x axis device: ", paste(state$xaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-               cat(paste("# x axis user: ", paste(state$xaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-               cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-               cat(paste("# y axis user: ", paste(state$yaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+               if (length(state$xaxis$device)) {
+                 cat(paste("# x axis device: ", paste(state$xaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+                 cat(paste("# x axis user: ", paste(state$xaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+                 cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+                 cat(paste("# y axis user: ", paste(state$yaxis$user, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+               }
                if (nchar(state$xname) < 1)
                  state$xname <- "x"
                if (nchar(state$yname) < 1)
@@ -153,14 +223,14 @@ server <- function(input, output)
   output$status <- renderText({
     if (is.null(state$inputFile)) {
       state$step <- 1
-      return("<b>SETUP 1</b><br>Select a file, and possibly rotate it.")
+      return(paste0("<b>SETUP 1</b><br>Select a file, and possibly rotate it. (state$stage=", state$stage, ")"))
     }
     if (length(state$xaxis$device) != 2) {
       state$step <- 2
       if (length(state$xaxis$device) == 0)
-        return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 2A</b><br>Click a known point on the X axis."))
+        return(paste("<b>SETUP 2A</b><br>Click a known point on the X axis."))
       else
-        return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 2B</b><br>Click a second known point on the X axis."))
+        return(paste("<br><b>SETUP 2B</b><br>Click a second known point on the X axis."))
     }
     if (is.null(state$xname)) {
       state$step <- 3
@@ -175,7 +245,7 @@ server <- function(input, output)
     }
     if (is.null(state$yname)) {
       state$step <- 5
-      return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 3C</b><br>Enter name of y axis"))
+      return(paste("<b>", state$inputFile$name, "</b><br><b>SETUP 3C</b><br>Enter name of y axis."))
     }
     state$step <- 6
     res <- paste("<b>", state$inputFile$name, "</b><br>", length(state$x$device), "points digitized")
@@ -227,6 +297,13 @@ server <- function(input, output)
                state$yname <- input$yAxisName
                removeModal()
   })
+
+  output$stage <- reactive({
+    msg("in output$stage reactive; returning ", state$stage, " (",ifelse(is.numeric(state$stage),"numeric","not numeric"), ")\n", sep="")
+    state$stage
+  })
+
+  outputOptions(output, "stage", suspendWhenHidden=FALSE)
 
 }
 
