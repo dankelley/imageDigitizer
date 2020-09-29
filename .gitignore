@@ -3,7 +3,7 @@
 .Rproj.user
 .Rhistory
 .RData
-*.imager
+*.imageDigitizer
 *~
 .Rapp.history
 .DS_Store

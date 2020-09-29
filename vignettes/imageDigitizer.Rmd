@@ -1,5 +1,5 @@
 ---
-title: "Using imager"
+title: "Using imageDigitizer"
 author: "Dan Kelley"
 date: "`r Sys.Date()`"
 output:
@@ -12,15 +12,15 @@ output:
     dpi: 72
     dev.args: list(pointsize=11)
 vignette: >
-  %\VignetteIndexEntry{Using imager}
+  %\VignetteIndexEntry{Using imageDigitizer}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
 
 <!-- HOW TO BUILD THE VIGNETTE. -->
-<!-- 1. edit this file in vignettes/imager.Rmd -->
+<!-- 1. edit this file in vignettes/imageDigitizer.Rmd -->
 <!-- 2. run devtools::build_vignettes() -->
-<!-- 3. build imager -->
+<!-- 3. build imageDigitizer -->
 
 
 ```{r, echo = FALSE}
@@ -45,7 +45,7 @@ close eye on the digitized points, so that only single-point corrections will
 be required.)
 
 
-![A sample screenshot showing the use of imager on an image of a Right Whale.](screenshot.png)
+![A sample screenshot showing the use of imageDigitizer on an image of a Right Whale.](screenshot.png)
 
 **References**
 

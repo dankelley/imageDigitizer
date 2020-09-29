@@ -1,8 +1,8 @@
 ^.*.dat$
-test.imager
+test.imageDigitizer
 test.png
 testr.png
 ^.*\.Rproj$
 ^\.Rproj\.user$
-imager.Rproj
+imageDigitizer.Rproj
 .Rbuildignore
