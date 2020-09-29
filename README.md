@@ -1,9 +1,9 @@
-`imager` is an R shiny app that can be used to digitize points on a graph that
+`imageDigitizer` is an R shiny app that can be used to digitize points on a graph that
 is contained in a PNG image. Here's how to get started:
 
 1. Copy a `.png` file here. It should contain a graph that uses linear axes.
 
-2. Launch RStudio and open the `imager.R` file, or type `runApp("imager.R")` in
+2. Launch RStudio and open the `imageDigitizer.R` file, or type `runApp("imageDigitizer.R")` in
    an R console.
 
 3. Follow the directions you see in the control panels. In summary, the steps
@@ -30,7 +30,7 @@ is contained in a PNG image. Here's how to get started:
        "Undo" button to correct the last point, or set of points.
     8. When you've digitized all the points of interest, click on the "Save"
        button, which saves to a text file with the name name as the image file,
-       except that the suffix `.png` is switched to `_imager.dat`. A header in
+       except that the suffix `.png` is switched to `_imageDigitizer.dat`. A header in
        the output file explains the data format and summarizes the mapping from
        pixel location to x-y value.
 

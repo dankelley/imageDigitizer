@@ -31,8 +31,6 @@ msg <- function(...)
 
 ui <- shiny::fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onInputChange("keypress", e.which); Shiny.onInputChange("keypressTrigger", Math.random()); });'),
                 shiny::uiOutput(outputId="title"),
-                #h5(paste("imager", version)),
-                #fluidRow(column(1, checkboxInput("debug", h6("Debug"), value=!FALSE))),
                 shiny::fluidRow(conditionalPanel(condition="output.stage == 1",
                                           column(3, shiny::uiOutput(outputId="readImage")),
                                           column(3, shiny::sliderInput("rotate", shiny::h5("Rotate [deg]"),
@@ -123,7 +121,7 @@ server <- function(input, output)
   }
 
   output$title <- shiny::renderUI({
-    shiny::h5(paste0("imager ", version, ifelse(is.null(state$inputFile), "", paste0(" (", state$inputFile, ")")))) 
+    shiny::h5(paste0("imageDigitizer ", version, ifelse(is.null(state$inputFile), "", paste0(" (", state$inputFile, ")")))) 
   })
 
   output$readImage <- shiny::renderUI({
@@ -175,8 +173,8 @@ server <- function(input, output)
   })
 
   shiny::observeEvent(input$save, {
-               file <- paste(gsub(".png$", "", state$inputFile$name), "_imager.dat", sep="")
-               cat(paste("# imager version ", version, "\n", sep=""), file=file)
+               file <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
+               cat(paste("# imageDigitizer version ", version, "\n", sep=""), file=file)
                cat(paste("# file:", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
                cat(paste("# rotation: ", state$rotate, "\n", sep=""), file=file, append=TRUE)
                if (length(state$xaxis$device)) {
