@@ -52,7 +52,7 @@ ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onI
 
 server <- function(input, output)
 {
-  state <- reactiveValues(step=1,
+  state <- shiny::reactiveValues(step=1,
                           stage=1,
                           rotate=0,
                           inputFile=NULL,
@@ -90,7 +90,7 @@ server <- function(input, output)
                    } else if (key == '0') {
                      msg("should unzoom now\n")
                    } else if (key == '?') {
-                     showModal(modalDialog(title="", HTML(keypressHelp), easyClose=TRUE))
+                     shiny::showModal(shiny::modalDialog(title="", shiny::HTML(keypressHelp), easyClose=TRUE))
                    }
                  }
                }
@@ -111,21 +111,21 @@ server <- function(input, output)
   }
   yAxisModal <- function(failed=FALSE)
   {
-    modalDialog(textInput("yAxisValue", "Enter y at last mouse click"),
+    shiny::modalDialog(textInput("yAxisValue", "Enter y at last mouse click"),
                 footer=tagList(modalButton("Cancel"), actionButton("yAxisButtonOk", "OK")))
   }
   yAxisNameModal <- function(failed=FALSE)
   {
-    modalDialog(textInput("yAxisName", "Enter name of y axis"),
-                footer=tagList(modalButton("Cancel"), actionButton("yAxisNameButtonOk", "OK")))
+    shiny::modalDialog(textInput("yAxisName", "Enter name of y axis"),
+                footer=tagList(shiny::modalButton("Cancel"), actionButton("yAxisNameButtonOk", "OK")))
   }
 
-  output$title <- renderUI({
-    h5(paste0("imager ", version, ifelse(is.null(state$inputFile), "", paste0(" (", state$inputFile, ")")))) 
+  output$title <- shiny::renderUI({
+    shiny::h5(paste0("imager ", version, ifelse(is.null(state$inputFile), "", paste0(" (", state$inputFile, ")")))) 
   })
 
-  output$readImage <- renderUI({
-    fileInput("inputFile", h5("Input file"), accept=c("image/png"))
+  output$readImage <- shiny::renderUI({
+    fileInput("inputFile", shiny::h5("Input file"), accept=c("image/png"))
   })
 
   output$plot <- renderPlot({
@@ -300,14 +300,14 @@ server <- function(input, output)
                removeModal()
   })
 
-  output$stage <- reactive({
+  output$stage <- shiny::reactive({
     msg("in output$stage reactive; returning ", state$stage, " (",ifelse(is.numeric(state$stage),"numeric","not numeric"), ")\n", sep="")
     state$stage
   })
 
-  outputOptions(output, "stage", suspendWhenHidden=FALSE)
+  shiny::outputOptions(output, "stage", suspendWhenHidden=FALSE)
 
-  output$readImage <- renderUI({
+  output$readImage <- shiny::renderUI({
     fileInput("inputFile", h5("Input file"), accept=c("image/png"))
   })
 
@@ -319,6 +319,6 @@ server <- function(input, output)
 #' means of mouse clicks. The GUI is meant to be reasonably self-explanatory.
 imager <- function()
 {
-  shinyApp(ui, server) #options=list(test.mode=TRUE))
+  shiny::shinyApp(ui, server) #options=list(test.mode=TRUE))
 }
 
