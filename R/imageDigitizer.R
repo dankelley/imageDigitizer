@@ -4,8 +4,9 @@ library(shiny)
 library(png)
 
 ## options(shiny.error=browser)
-debugFlag <-
-  TRUE                      # For console messages that trace control flow.
+stageMeanings <- c("Input file", "Name axes", "Rotate image", "Define x axis", "Define y axis", "Digitize Points")
+
+debugFlag <- TRUE                      # For console messages that trace control flow.
 version <- "0.1.5"
 keypressHelp <- "
 <i>Keystroke interpretation</i>
@@ -24,35 +25,42 @@ keypressHelp <- "
 
 "
 
-msg <- function(...)
+dmsg <- function(...)
 {
   if (debugFlag)
     cat(file=stderr(), ...)
 }
 
+fileLoaded <- FALSE
+
 ui <-
-  shiny::fluidPage(
-    tags$script(
-      '$(document).on("keypress", function (e) { Shiny.onInputChange("keypress", e.which); Shiny.onInputChange("keypressTrigger", Math.random()); });'
-    ),
-    shiny::uiOutput(outputId="title"),
-    shiny::fluidRow(conditionalPanel(condition="output.stage == 1",
-                                     shiny::column(3, shiny::uiOutput(outputId = "readImage")),
-                                     shiny::column(3, shiny::sliderInput( "rotate", shiny::h5("Rotate [deg]"),
-                                                                         min=-10, max=10, value=0, step=0.1)),
-                                     shiny::column(3, shiny::radioButtons("grid", label=shiny::h5("Grid"),
-                                                                          choices=c("None"="off", "Fine"="fine",
-                                                                                    "Medium"="medium", "Coarse"="coarse"),
-                                                                          selected="medium", inline=TRUE)),
-                                     shiny::column(2, shiny::actionButton("stage1button", "Next Stage")))),
-                   shiny::fluidRow(shiny::radioButtons( "code", label="Symbol code", choices=1:10, selected=1, inline=TRUE)),
-                   shiny::fluidRow(shiny::conditionalPanel(condition="output.stage == 3",
-                                                           shiny::column(3, shiny::textInput("xname", shiny::h5("Name horiz. axis"))),
-                                                           shiny::column(3, shiny::textInput("yname", shiny::h5("Name vert. axis"))))),
-                   shiny::fluidRow(shiny::column(2, shiny::actionButton("undo", "Undo")),
-                                   shiny::column(2, shiny::actionButton("save", "Save results"))),
-                   fluidRow(column(2, shiny::htmlOutput("status")),
-                            column(10, shiny::plotOutput("plot", click="plotClick", hover="plotHover", height=600))))
+  shiny::fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onInputChange("keypress", e.which); Shiny.onInputChange("keypressTrigger", Math.random()); });'),
+                   shiny::uiOutput(outputId="title"),
+                   shiny::conditionalPanel(condition="output.stage == '1'",
+                                           shiny::fluidRow(shiny::uiOutput(outputId="loadFile")),
+                                           shiny::fluidRow(shiny::actionButton("stage1button", "Proceed to Next Stage"))),
+                   shiny::conditionalPanel(condition="output.stage == '2'",
+                                           shiny::fluidRow(shiny::textInput("xname", shiny::h5("Name horiz. axis"))),
+                                           shiny::fluidRow(shiny::textInput("yname", shiny::h5("Name vert. axis"))),
+                                           shiny::fluidRow(shiny::actionButton("stage2button", "Proceed to Next Stage"))),
+                   shiny::conditionalPanel(condition="output.stage == '3'",
+                                           shiny::fluidRow(shiny::sliderInput("rotate", shiny::h5("Rotate Image [deg]"),
+                                                                              min=-10, max=10, value=0, step=0.1)),
+                                           shiny::fluidRow(shiny::actionButton("stage3button", "Proceed to Next Stage"))),
+                   shiny::conditionalPanel(condition="output.stage > '2'",
+                                           shiny::fluidRow(shiny::radioButtons("grid", label=shiny::h5("Grid"),
+                                                                               choices=c("None"="off", "Fine"="fine",
+                                                                                         "Medium"="medium", "Coarse"="coarse"),
+                                                                               selected="medium", inline=TRUE))),
+                   shiny::conditionalPanel(condition="output.stage > '4'",
+                                           shiny::fluidRow(shiny::radioButtons("code", label="Symbol code",
+                                                                               choices=1:10, selected=1, inline=TRUE)),
+                                           shiny::fluidRow(shiny::column(2, shiny::actionButton("undo", "Undo")),
+                                                           shiny::column(2, shiny::actionButton("save", "Save results"))),
+                                           shiny::fluidRow(shiny::column(2, shiny::actionButton("quit", "Quit"))),
+                                           shiny::fluidRow(shiny::column(2, shiny::htmlOutput("status")))),
+                   shiny::conditionalPanel(condition="output.stage > '1'",
+                                           shiny::fluidRow(shiny::plotOutput("plot", click="plotClick", hover="plotHover", height=600))))
 
 server <- function(input, output)
 {
@@ -75,10 +83,23 @@ server <- function(input, output)
     yhover=NULL
   )
 
-  shiny::observeEvent(input$stage1button,
-                      {
-                        state$stage <- 2
-                      })
+  shiny::observeEvent(input$loadFile, {
+                      if (!fileLoaded)  {
+                        shiny::insertUI("loadAFile", ui=shiny::fileInput("inputFile", shiny::h5("Input file"), accept=c("image/png")))
+                      }
+  })
+
+  shiny::observeEvent(input$stage1button, {
+                      dmsg("clicked stage1button (state$stage=", state$stage, ")\n", sep="")
+                      if (!is.null(state$inputFile)) {
+                        state$stage <<- 2
+                      } else {
+                        shiny::showNotification("Select a file first, then click 'Next'")
+                      }
+  })
+
+  shiny::observeEvent(input$stage2button, { dmsg("clicked stage2button\n"); state$stage <<- 3 })
+  shiny::observeEvent(input$stage3button, { dmsg("clicked stage3button\n"); state$stage <<- 4 })
 
   #'
   #' @importFrom shiny HTML modalDialog showModal
@@ -86,18 +107,18 @@ server <- function(input, output)
                       {
                         if (state$step == 6) {
                           key <- intToUtf8(input$keypress)
-                          msg("keypress numerical value ",
+                          dmsg("keypress numerical value ",
                               input$keypress,
                               ", i.e. key='",
                               key,
                               "'\n",
                               sep="")
                           if (key == '+') {
-                            msg("should zoom in now\n")
+                            dmsg("should zoom in now\n")
                           } else if (key == '-') {
-                            msg("should zoom out now\n")
+                            dmsg("should zoom out now\n")
                           } else if (key == '0') {
-                            msg("should unzoom now\n")
+                            dmsg("should unzoom now\n")
                           } else if (key == '?') {
                             shiny::showModal(shiny::modalDialog(
                               title="",
@@ -149,18 +170,18 @@ server <- function(input, output)
     )
   }
 
+
   output$title <- shiny::renderUI({
-    shiny::h5(paste0("imageDigitizer ", version, ifelse(
-      is.null(state$inputFile),
-      "",
-      paste0(" (", state$inputFile, ")")
-    )))
+    shiny::h5(paste0("imageDigitizer ", version,
+                     ifelse(is.null(state$inputFile), "", paste0(" | File '", state$inputFile, "'")),
+                     " | Processing stage ", state$stage, " (", stageMeanings[state$stage], ")"))
   })
 
-  output$readImage <- shiny::renderUI({
-    shiny::fileInput("inputFile",
-                     shiny::h5("Input file"),
-                     accept=c("image/png"))
+  output$loadFile <- shiny::renderUI({
+    if (state$stage == 1) {
+      shiny::fileInput("inputFile", shiny::h5("Input file"), accept=c("image/png"))
+      #state$stage <<- 2
+    }
   })
 
   #' @importFrom graphics abline box par points rasterImage text
@@ -327,7 +348,8 @@ server <- function(input, output)
     state$inputFile <- input$inputFile
     state$image <- png::readPNG(state$inputFile$datapath)
     state$imageExists <- TRUE
-    msg("state$imageExists=", state$imageExists)
+    state$stage <- 2
+    dmsg("state$imageExists=", state$imageExists)
   })
 
   shiny::observeEvent(input$xname, {
@@ -370,8 +392,8 @@ server <- function(input, output)
   })
 
   output$stage <- shiny::reactive({
-    msg("in output$stage reactive; returning ", state$stage, " (", ifelse(is.numeric(state$stage), "numeric", "not numeric"), ")\n", sep="")
-    state$stage
+    dmsg("output$stage is returning ", state$stage, " based on state$stage\n", sep="")
+    as.numeric(state$stage)
   })
 
   shiny::outputOptions(output, "stage", suspendWhenHidden=FALSE)
@@ -391,3 +413,4 @@ imageDigitizer <- function()
 {
   shiny::shinyApp(ui, server) #options=list(test.mode=TRUE))
 }
+
