@@ -4,15 +4,19 @@ library(shiny)
 library(png)
 
 ## options(shiny.error=browser)
-stageMeanings <- c("Input file",          # 1
-                   "Rotate image",        # 2
-                   "Name x axis",         # 3
-                   "Define low x value",  # 4
-                   "Define high x value", # 5
-                   "Name y axis",         # 6
-                   "Define low y value",  # 7
-                   "Define high y value", # 8
-                   "Digitize Points")     # 9
+stageMeanings <- c("Input file",          #  1 stage1button increases stage to  2
+                   "Rotate image",        #  2 stage2button increases stage to  3
+                   "Name x axis",         #  3 stage3button increases stage to  4
+                   "Define low x value",  #  4 stage4button increases stage to  5
+                   "Click low x value",   #  5  mouse click increases stage to  6
+                   "Define high x value", #  6 stage6button increases stage to  7
+                   "Click high x value",  #  7  mouse click increases stage to  8
+                   "Name y axis",         #  8 stage8button increases stage to  9
+                   "Define low y value",  #  9 stage9button increases stage to 10
+                   "Click low y value",   # 10  mouse click increases stage to 11
+                   "Define high y value", # 11 stage9button increases stage to 12
+                   "Click high y value",  # 12  mouse click increases stage to 13
+                   "Digitize Points")     # 13 final stage (FIXME: what about a 'quit' stage?)
 colAxes <- "magenta"
 
 debugFlag <- TRUE                      # For console messages that trace control flow.
@@ -50,22 +54,28 @@ ui <- shiny::fluidPage(tags$script('$(document).on("keypress", function (e) { Sh
                        shiny::conditionalPanel(condition="output.stage == '2'",
                                                shiny::sliderInput("rotate", shiny::h5("Rotate Image [deg]"),
                                                                   min=-10, max=10, value=0, step=0.1),
-                                               shiny::actionButton("stage2button", "Proceed to Stage 3 (naming x axis)")),
+                                               shiny::actionButton("stage2button", "Proceed to naming of the x axis")),
                        shiny::conditionalPanel(condition="output.stage == '3'",
                                                shiny::textInput("xname", shiny::h5("Name x axis")),
-                                               shiny::actionButton("stage3button", "Proceed to Stage 4 (selecting low x value)")),
+                                               shiny::actionButton("stage3button", "Proceed to specifying a low x value")),
                        shiny::conditionalPanel(condition="output.stage == '4'",
                                                shiny::textInput("xmin", shiny::h5("A low x value you will click in a moment")),
-                                               shiny::actionButton("stage4button", "Proceed to Stage 5 (selecting high x value)")),
-                       shiny::conditionalPanel(condition="output.stage == '5'",
-                                               shiny::textInput("xmax", shiny::h5("A high x value you will click in a moment")),
-                                               shiny::actionButton("stage5button", "Proceed to Stage 6 (selecting low y value)")),
+                                               shiny::actionButton("stage4button", "Proceed to clicking this x value")),
+                                               ## This button increases stage to 5, and then the click increases it to 6.
                        shiny::conditionalPanel(condition="output.stage == '6'",
+                                               shiny::textInput("xmax", shiny::h5("A high x value you will click in a moment")),
+                                               shiny::actionButton("stage6button", "Proceed to clicking this x value")),
+                                               ## This button increases stage to 7, and then the click increases it to 8.
+                       shiny::conditionalPanel(condition="output.stage == '8'",
+                                               shiny::textInput("yname", shiny::h5("Name y axis")),
+                                               shiny::actionButton("stage8button", "Proceed to specifying a low x value")),
+                       shiny::conditionalPanel(condition="output.stage == '9'",
                                                shiny::textInput("ymin", shiny::h5("A low y value you will click in a moment")),
-                                               shiny::actionButton("stage6button", "Proceed to Stage 7 (selecting high y value)")),
-                       shiny::conditionalPanel(condition="output.stage == '7'",
+                                               shiny::actionButton("stage9button", "Proceed to clicking this y value")),
+                                               ## This button increases stage to 9, and then the click increases it to 10.
+                       shiny::conditionalPanel(condition="output.stage == '11'",
                                                shiny::textInput("ymax", shiny::h5("A high y value you will click in a moment")),
-                                               shiny::actionButton("stage7button", "Proceed to Stage 8 (digitizing data)")),
+                                               shiny::actionButton("stage11button", "Proceed to clicking this y value")),
                        shiny::conditionalPanel(condition="output.stage > '2'",
                                                shiny::fluidRow(shiny::radioButtons("grid", label=shiny::h5("Grid"),
                                                                                    choices=c("None"="off", "Fine"="fine",
@@ -127,13 +137,33 @@ server <- function(input, output)
 
   shiny::observeEvent(input$stage4button, {
                       dmsg("clicked stage4button\n")
+                      ## The click will increase state$stage
+                      shiny::showNotification(paste0("Click the mouse once, at x=", input$xmin))
                       state$stage <<- 5
   })
 
   shiny::observeEvent(input$stage6button, {
                       dmsg("clicked stage6button\n")
+                      ## The click will increase state$stage
+                      shiny::showNotification(paste0("Click the mouse once, at x=", input$xmax))
                       state$stage <<- 7
   })
+
+  shiny::observeEvent(input$stage8button, {
+                      dmsg("clicked stage8button\n")
+                      ## The click will increase state$stage
+                      shiny::showNotification(paste0("Click the mouse once, at y=", input$ymin))
+                      state$stage <<- 9
+  })
+
+  shiny::observeEvent(input$stage9button, {
+                      dmsg("clicked stage9button\n")
+                      ## The click will increase state$stage
+                      shiny::showNotification(paste0("Click the mouse once, at y=", input$ymax))
+                      state$stage <<- 10
+  })
+
+
 
   #'
   #' @importFrom shiny HTML modalDialog showModal
@@ -303,23 +333,24 @@ server <- function(input, output)
 
   shiny::observeEvent(input$click, {
                       dmsg("click with state$stage =", state$stage, "\n")
-                      if (state$stage == 4) {
+                      if (state$stage == 5) {
                         state$xaxis$device <- input$click$x
-                        state$stage <- 5
-                        dmsg("  defined xaxis$device[1] as ", state$xaxis$device[1])
-                      } else if (state$stage == 5) {
-                        state$xaxis$device <- c(state$xaxis$device, input$click$x)
                         state$stage <- 6
-                        dmsg("  defined xaxis$device[2] as ", state$xaxis$device[2])
-                      } else if (state$stage == 7) {
+                        dmsg("  defined state$xaxis$device[1] as ", state$xaxis$device[1], "\n")
+                      } else if (state$stage == 6) {
+                        state$xaxis$device <- c(state$xaxis$device, input$click$x)
+                        state$stage <- 7
+                        dmsg("  defined state$xaxis$device[2] as ", state$xaxis$device[2], "\n")
+                      } else if (state$stage == 10) {
                         state$yaxis$device <- input$click$y
-                        state$stage <- 8
-                        dmsg("  defined yaxis$device[1] as ", state$yaxis$device[1])
-                      } else if (state$stage == 8) {
+                        state$stage <- 11
+                        dmsg("  defined state$yaxis$device[1] as ", state$yaxis$device[1], "\n")
+                      } else if (state$stage == 12) {
                         state$yaxis$device <- c(state$yaxis$device, input$click$y)
-                        state$stage <- 9
-                        dmsg("  defined yaxis$device[2] as ", state$yaxis$device[2])
-                      } else if (state$stage == 9) { # digitizing points
+                        state$stage <- 13
+                        dmsg("  defined state$yaxis$device[2] as ", state$yaxis$device[2], "\n")
+                        shiny::showNotification("Now, start clicking points to digitize them.")
+                      } else if (state$stage == 13) { # digitizing points
                         state$x$device <- c(state$x$device, input$click$x)
                         state$y$device <- c(state$y$device, input$click$y)
                         state$code <- c(state$code, as.numeric(input$code))
