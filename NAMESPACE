@@ -3,6 +3,7 @@
 export(imageDigitizer)
 importFrom(graphics,abline)
 importFrom(graphics,box)
+importFrom(graphics,mtext)
 importFrom(graphics,par)
 importFrom(graphics,points)
 importFrom(graphics,rasterImage)

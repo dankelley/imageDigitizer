@@ -1,3 +1,3 @@
 # Status
 
-Stuck at stage 7.
+1. [ ] Quit does not work.
