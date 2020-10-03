@@ -17,9 +17,10 @@ stageMeanings <- c("Input file",          #  1  stage1button increases stage to 
                    "Define high y value", # 11 stage11button increases stage to 12
                    "Click high y value",  # 12   mouse click increases stage to 13
                    "Digitize Points")     # 13 final stage (FIXME: what about a 'quit' stage?)
-colAxes <- "magenta"
 
-debugFlag <- TRUE                      # For console messages that trace control flow.
+col <- list(axes="magenta", grid="blue")
+
+debugFlag <- !TRUE                     # For console messages that trace control flow.
 version <- "0.1.5"
 keypressHelp <- "
 <i>Keystroke interpretation</i>
@@ -55,7 +56,7 @@ ui <- shiny::fluidPage(tags$script('$(document).on("keypress", function (e) { Sh
                                                shiny::fluidRow(shiny::column(6, shiny::sliderInput("rotate", shiny::h5("Rotate Image [deg]"),
                                                                                                    min=-10, max=10, value=0, step=0.1)),
                                                                shiny::column(6, shiny::actionButton("stage2button",
-                                                                                                    "Save rotation angle and proceed to next step",
+                                                                                                    "Proceed to next step",
                                                                                                     style="margin-top: 50px;"))),
                                                shiny::fluidRow(shiny::radioButtons("grid", label=shiny::h5("Grid"),
                                                                                    choices=c("None"="off", "Fine"="fine",
@@ -64,39 +65,40 @@ ui <- shiny::fluidPage(tags$script('$(document).on("keypress", function (e) { Sh
                        shiny::conditionalPanel(condition="output.stage == '3'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("xname", shiny::h5("Name x axis"))),
                                                                shiny::column(6, shiny::actionButton("stage3button",
-                                                                                                    "Save x name and proceed to next step",
+                                                                                                    "Poceed to next step",
                                                                                                     style="margin-top: 50px;")))),
                        shiny::conditionalPanel(condition="output.stage == '4'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("xmin", shiny::h5("A low x value you will click in a moment"))),
                                                                shiny::column(6, shiny::actionButton("stage4button",
-                                                                                                    "Save low x value and proceed to next step (of clicking on that value)",
+                                                                                                    "Proceed to clicking on that value",
                                                                                                     style="margin-top: 50px;")))),
                        shiny::conditionalPanel(condition="output.stage == '6'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("xmax", shiny::h5("A high x value you will click in a moment"))),
                                                                shiny::column(6, shiny::actionButton("stage6button",
-                                                                                                    "Save high x value and proceed to next step (of clicking on that value)",
+                                                                                                    "Proceed to clicking on that value",
                                                                                                     style="margin-top: 50px;")))),
                        shiny::conditionalPanel(condition="output.stage == '8'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("yname", shiny::h5("Name y axis"))),
                                                                shiny::column(6, shiny::actionButton("stage8button",
-                                                                                                    "Save y name and proceed to next step",
+                                                                                                    "Proceed to next step",
                                                                                                     style="margin-top: 50px;")))),
                        shiny::conditionalPanel(condition="output.stage == '9'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("ymin", shiny::h5("A low y value you will click in a moment"))),
                                                                shiny::column(6, shiny::actionButton("stage9button",
-                                                                                                    "Save low y value and proceed to next step (of clicking on that value)",
+                                                                                                    "Proceed to clicking on that value",
                                                                                                     style="margin-top: 50px;")))),
                                                ## This button increases stage to 9, and then the click increases it to 10.
                        shiny::conditionalPanel(condition="output.stage == '11'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("ymax", shiny::h5("A high y value you will click in a moment"))),
                                                                shiny::column(6, shiny::actionButton("stage11button",
-                                                                                                    "Save high y value and proceed to next step (of clicking on that value)",
+                                                                                                    "Proceed to clicking on that value",
                                                                                                     style="margin-top: 50px;")))),
                        shiny::conditionalPanel(condition="output.stage > '12'",
                                                shiny::fluidRow(shiny::radioButtons("code", label="Symbol code",
                                                                                    choices=1:10, selected=1, inline=TRUE)),
                                                shiny::fluidRow(shiny::column(2, shiny::actionButton("undo", "Undo")),
-                                                               shiny::column(2, shiny::actionButton("save", "Save results")),
+                                                               shiny::column(2, shiny::actionButton("save", "Save Data")),
+                                                               shiny::column(2, shiny::actionButton("Rcode", "R Code")),
                                                                shiny::column(2, shiny::actionButton("quit", "Quit"))),
                                                shiny::fluidRow(shiny::column(2, shiny::htmlOutput("status")))),
                        shiny::conditionalPanel(condition="output.stage > '1'",
@@ -122,6 +124,50 @@ server <- function(input, output)
     xhover=NULL,
     yhover=NULL
   )
+
+  saveFile <- function()
+  {
+    file <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
+    cat(paste("# imageDigitizer version ", version, "\n", sep = ""), file=file)
+    cat(paste("# file: ", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
+    cat(paste("# rotation: ", state$rotate, "\n", sep=""), file=file, append=TRUE)
+    if (length(state$xaxis$device)) {
+      cat(paste("# x axis device: ", paste(state$xaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+      cat(paste("# x axis user:   ", paste(state$xaxis$user,   collapse=" "), "\n", sep=""), file=file, append=TRUE)
+      cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
+      cat(paste("# y axis user:   ", paste(state$yaxis$user,   collapse=" "), "\n", sep=""), file=file, append=TRUE)
+    }
+    if (nchar(state$xname) < 1)
+      state$xname <- "x"
+    if (nchar(state$yname) < 1)
+      state$yname <- "y"
+    cat(sprintf("i,devicex,devicey,%s,%s,code\n", state$xname, state$yname), file=file, append=TRUE)
+    xuser <- predict(state$xaxisModel, data.frame(device=state$x$device))
+    yuser <- predict(state$yaxisModel, data.frame(device=state$y$device))
+    for (i in seq_along(state$x$device)) {
+      cat(sprintf("%3d,%10.3f,%10.3f,%20g,%20g,%d\n", i, state$x$device[i], state$y$device[i], xuser[i], yuser[i],state$code[i]), file=file, append=TRUE)
+    }
+   }
+
+  shiny::observeEvent(input$Rcode, {
+                      ofile <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
+                      msg <- "# Sample code to read and plot the saved data file<br>\n"
+                      msg <- paste0(msg, "data <- read.csv(file=\"", ofile, "\", skip=7, header=TRUE)<br>\n")
+                      msg <- paste0(msg, "plot(",
+                                    "data[[\"", state$xname, "\"]],",
+                                    "data[[\"", state$yname, "\"]],",
+                                    "xlab=\"", state$xname, "\",",
+                                    "ylab=\"", state$yname, "\",",
+                                    "pch=data$code)<br>\n")
+                      dmsg(msg)
+                      shiny::showModal(shiny::modalDialog(shiny::HTML(msg), title="R code", size="l"))
+  })
+
+  shiny::observeEvent(input$quit, {
+                      saveFile()
+                      shiny::stopApp()
+  })
+
 
   shiny::observeEvent(input$loadFile, {
                       shiny::insertUI("loadAFile", ui=shiny::fileInput("inputFile", shiny::h5("Input file"), accept=c("image/png")))
@@ -273,31 +319,31 @@ server <- function(input, output)
     if (is.null(state$image)) {
       text(0.2, 0.5, "No .png file has been selected yet.")
     } else {
-      rasterImage(state$image, 0, 0, 1, 1, angle=-state$rotate)
+      rasterImage(state$image, 0, 0, 1, 1, angle=-state$rotate, interpolate=FALSE)
       if (input$grid == "fine") {
-        abline(h=seq(-3, 3, 0.05), col='magenta', lty="dotted")
-        abline(v=seq(-3, 3, 0.05 * asp), col='magenta', lty="dotted")
+        abline(h=seq(-3, 3, 0.05), col=col$grid, lty="dotted")
+        abline(v=seq(-3, 3, 0.05 * asp), col=col$grid, lty="dotted")
       } else if (input$grid == "medium") {
-        abline(h=seq(-3, 3, 0.1), col='magenta', lty="dotted")
-        abline(v=seq(-3, 3, 0.1 * asp), col='magenta', lty="dotted")
+        abline(h=seq(-3, 3, 0.1), col=col$grid, lty="dotted")
+        abline(v=seq(-3, 3, 0.1 * asp), col=col$grid, lty="dotted")
       } else if (input$grid == "coarse") {
-        abline(h=seq(-3, 3, 0.2), col='magenta', lty="dotted")
-        abline(v=seq(-3, 3, 0.2 * asp), col='magenta', lty="dotted")
+        abline(h=seq(-3, 3, 0.2), col=col$grid, lty="dotted")
+        abline(v=seq(-3, 3, 0.2 * asp), col=col$grid, lty="dotted")
       }
       if (length(state$xaxis$device) != 0) {
-        abline(v=state$xaxis$device[1], col=colAxes)
-        mtext(state$xaxis$user[1], side=3, at=state$xaxis$device[1], col=colAxes)
+        abline(v=state$xaxis$device[1], col=col$axes)
+        mtext(state$xaxis$user[1], side=3, at=state$xaxis$device[1], col=col$axes)
         if (length(state$xaxis$device) == 2) {
-          abline(v=state$xaxis$device[2], col=colAxes)
-          mtext(state$xaxis$user[2], side=3, at=state$xaxis$device[2], col=colAxes)
+          abline(v=state$xaxis$device[2], col=col$axes)
+          mtext(state$xaxis$user[2], side=3, at=state$xaxis$device[2], col=col$axes)
         }
       }
       if (length(state$yaxis$device) != 0) {
-        abline(h=state$yaxis$device[1], col=colAxes)
-        mtext(state$yaxis$user[1], side=4, at=state$yaxis$device[1], col=colAxes)
+        abline(h=state$yaxis$device[1], col=col$axes)
+        mtext(state$yaxis$user[1], side=4, at=state$yaxis$device[1], col=col$axes)
         if (length(state$yaxis$device) == 2) {
-          abline(h=state$yaxis$device[2], col=colAxes)
-          mtext(state$yaxis$user[2], side=4, at=state$yaxis$device[2], col=colAxes)
+          abline(h=state$yaxis$device[2], col=col$axes)
+          mtext(state$yaxis$user[2], side=4, at=state$yaxis$device[2], col=col$axes)
         }
       }
       if (length(state$x$device)) {
@@ -316,32 +362,13 @@ server <- function(input, output)
   })
 
   shiny::observeEvent(input$save, {
-    file <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
-    cat(paste("# imageDigitizer version ", version, "\n", sep = ""), file=file)
-    cat(paste("# file: ", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
-    cat(paste("# rotation: ", state$rotate, "\n", sep=""), file=file, append=TRUE)
-    if (length(state$xaxis$device)) {
-      cat(paste("# x axis device: ", paste(state$xaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-      cat(paste("# x axis user:   ", paste(state$xaxis$user,   collapse=" "), "\n", sep=""), file=file, append=TRUE)
-      cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-      cat(paste("# y axis user:   ", paste(state$yaxis$user,   collapse=" "), "\n", sep=""), file=file, append=TRUE)
-    }
-    if (nchar(state$xname) < 1)
-      state$xname <- "x"
-    if (nchar(state$yname) < 1)
-      state$yname <- "y"
-    cat(sprintf("i,devicex,devicey,%s,%s,code\n", state$xname, state$yname), file=file, append=TRUE)
-    xuser <- predict(state$xaxisModel, data.frame(device=state$x$device))
-    yuser <- predict(state$yaxisModel, data.frame(device=state$y$device))
-    for (i in seq_along(state$x$device)) {
-      cat(sprintf("%3d,%10.3f,%10.3f,%20g,%20g,%d\n", i, state$x$device[i], state$y$device[i], xuser[i], yuser[i],state$code[i]), file=file, append=TRUE)
-    }
-    shiny::showNotification(paste0("File '", file, "' saved"))
+                      saveFile()
+                      shiny::showNotification(paste0("File '", state$inputFile$name, "' saved"))
   })
 
   shiny::observeEvent(input$plotHover, {
-    state$xhover <- input$plotHover$x
-    state$yhover <- input$plotHover$y
+                      state$xhover <- input$plotHover$x
+                      state$yhover <- input$plotHover$y
   })
 
   #' @importFrom stats lm predict
@@ -354,10 +381,10 @@ server <- function(input, output)
                       } else if (state$stage == 7) {
                         state$xaxis$device <<- c(state$xaxis$device, input$click$x)
                         dmsg("about to do lm() with state$xaxis as follows\n")
-                        print(file=stderr(), state$xaxis)
+                        if (debugFlag) print(file=stderr(), state$xaxis)
                         state$xaxisModel <<- lm(user ~ device, data=state$xaxis)
                         dmsg("next is state$xaxisModel\n")
-                        print(file=stderr(), state$xaxisModel)
+                        if (debugFlag) print(file=stderr(), state$xaxisModel)
                         state$stage <- 8
                         dmsg("  defined state$xaxis$device[2] as ", state$xaxis$device[2], "\n")
                       } else if (state$stage == 10) {
@@ -367,10 +394,10 @@ server <- function(input, output)
                       } else if (state$stage == 12) {
                         state$yaxis$device <<- c(state$yaxis$device, input$click$y)
                         dmsg("about to do lm() with state$yaxis as follows\n")
-                        print(file=stderr(), state$yaxis)
+                        if (debugFlag) print(file=stderr(), state$yaxis)
                         state$yaxisModel <<- lm(user ~ device, data=state$yaxis)
                         dmsg("next is state$yaxisModel\n")
-                        print(file=stderr(), state$yaxisModel)
+                        if (debugFlag) print(file=stderr(), state$yaxisModel)
                         state$stage <- 13
                         dmsg("  defined state$yaxis$device[2] as ", state$yaxis$device[2], "\n")
                         shiny::showNotification("Now, start clicking points to digitize them.")
@@ -378,6 +405,8 @@ server <- function(input, output)
                         state$x$device <<- c(state$x$device, input$click$x)
                         state$y$device <<- c(state$y$device, input$click$y)
                         state$code <<- c(state$code, as.numeric(input$code))
+                        dmsg("Next is input$code\n")
+                        if (debugFlag) print(file=stderr(), input$code)
                         n <- length(state$x$device)
                         dmsg("  defined i-th point as c(", state$x$device[n], ",", state$y$device[n], ")\n")
                       ### } else {
