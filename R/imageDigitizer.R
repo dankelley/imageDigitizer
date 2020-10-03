@@ -10,6 +10,9 @@
 ##>> plot(0:1,0:1,xlab="",ylab="",type="n")
 ##>> rasterImage(image_rotate(image_shear(ii,"1x0"),-0.5),0,0,1,1)
 
+## https://cran.r-project.org/web/packages/magick/vignettes/intro.html#Transformations
+## http://alumni.media.mit.edu/~maov/classes/comp_photo_vision08f/lect/08_image_warps.pdf
+
 
 library(shiny)
 library(png)
@@ -332,10 +335,8 @@ server <- function(input, output)
   #' @importFrom magick image_shear
   output$plot <- shiny::renderPlot({
     par(mar=rep(1, 4))
-    DAN<<-state$image
+    ##DAN<<-state$image
     idim <- dim(state$image[[1]])
-    dmsg("next is idim:\n")
-    print(file=stderr(), idim)
     asp <- if (is.null(state$image)) 1 else idim[3] / idim[2] # FIXME: or reciprocal?
     dmsg("idim=c(", idim[1], ",", idim[2], "); asp=", asp, "\n")
     plot(0:1, 0:1, type='n', asp=asp, xaxs="i", yaxs="i", axes=FALSE)
@@ -444,8 +445,8 @@ server <- function(input, output)
                         state$x$device <<- c(state$x$device, input$click$x)
                         state$y$device <<- c(state$y$device, input$click$y)
                         state$code <<- c(state$code, as.numeric(input$code))
-                        dmsg("Next is input$code\n")
-                        if (debugFlag) print(file=stderr(), input$code)
+                        ##dmsg("Next is input$code\n")
+                        ##if (debugFlag) print(file=stderr(), input$code)
                         n <- length(state$x$device)
                         dmsg("  defined i-th point as c(", state$x$device[n], ",", state$y$device[n], ")\n")
                       ### } else {
