@@ -12,12 +12,32 @@
 
 ## https://cran.r-project.org/web/packages/magick/vignettes/intro.html#Transformations
 ## http://alumni.media.mit.edu/~maov/classes/comp_photo_vision08f/lect/08_image_warps.pdf
-
+## http://www.imagemagick.org/Usage/distorts/#perspective
+## https://github.com/ropensci/magick/issues/273
 
 library(shiny)
 library(png)
 
-options(shiny.error=browser)
+#options(shiny.error=browser) # this does not seem to do anything useful, for errors I get
+
+default <- list(fourCorners=FALSE)
+
+## corners() returns a list with the corners in x and y
+## corners(list(x=A,y=B)) adds a corner
+corners <- local({
+  rval <- list(x=NULL, y=NULL)
+  function(xy) {
+    if (missing(xy) || length(rval$x) > 4) {
+      rval
+    } else {
+      rval$x <<- c(rval$x, xy$x)
+      rval$y <<- c(rval$y, xy$y)
+      rval
+    }
+  }
+})
+
+
 stageMeanings <- c("Input file",          #  1  stage1button increases stage to  2
                    "Rotate image",        #  2  stage2button increases stage to  3
                    "Name x axis",         #  3  stage3button increases stage to  4
@@ -39,9 +59,10 @@ version <- "0.1.5"
 keypressHelp <- "
 <i>Keystroke interpretation</i>
 <ul>
-<li> '<b>+</b>': zoom in, centred on mouse location
-<li> '<b>-</b>': zoom out
-<li> '<b>0</b>': unzoom
+<li><b>4</b> select 4 corners</li>
+<li> BROKEN '<b>+</b>': zoom in, centred on mouse location</li>
+<li> BROKEN '<b>-</b>': zoom out</li>
+<li> BROKEN '<b>0</b>': unzoom</li>
 </ul>
 
 <i>Developer plans</i>
@@ -125,7 +146,7 @@ ui <- shiny::fluidPage(tags$script('$(document).on("keypress", function (e) { Sh
 
 server <- function(input, output)
 {
-  state <- shiny::reactiveValues(
+  state <- shiny::reactiveValues(fourCorners=default$fourCorners,
     step=1, # 1: need to click to define x axis; 2: need to click to define y axis; 3: acquire data
     stage=1,
     shearx=0,
@@ -253,30 +274,26 @@ server <- function(input, output)
   })
 
 
-
-
   #'
   #' @importFrom shiny HTML modalDialog showModal
   shiny::observeEvent(input$keypressTrigger,
                       {
-                        if (state$step == 6) {
+                        #if (state$step == 6) {
                           key <- intToUtf8(input$keypress)
-                          dmsg("keypress numerical value ",
-                              input$keypress,
-                              ", i.e. key='",
-                              key,
-                              "'\n",
-                              sep="")
-                          if (key == '+') {
-                            dmsg("should zoom in now\n")
+                          dmsg("keypress '", input$keypress, "' or '", key, "'\n", sep="")
+                          if (key == '4') {
+                            state$fourCorners <<- !state$fourCorners
+                            dmsg("SWITCH fourCorners to", state$fourCorners, "\n")
+                          } else if (key == '+') {
+                            dmsg("BROKEN: should zoom in now\n")
                           } else if (key == '-') {
-                            dmsg("should zoom out now\n")
+                            dmsg("BROKEN: should zoom out now\n")
                           } else if (key == '0') {
-                            dmsg("should unzoom now\n")
+                            dmsg("BROKEN: should unzoom now\n")
                           } else if (key == '?') {
                             shiny::showModal(shiny::modalDialog( title="", shiny::HTML(keypressHelp), easyClose=TRUE))
                           }
-                        }
+                        #}
                       })
 
   xAxisModal <- function(failed=FALSE)
@@ -321,7 +338,7 @@ server <- function(input, output)
   output$title <- shiny::renderUI({
     shiny::h5(paste0("imageDigitizer ", version,
                      ifelse(is.null(state$inputFile), "", paste0(" | File '", state$inputFile, "'")),
-                     " | Processing stage ", state$stage, " (", stageMeanings[state$stage], ")"))
+                     " | Processing stage ", state$stage, " (", stageMeanings[state$stage], "); fourCorners=", state$fourCorners))
   })
 
   output$loadFile <- shiny::renderUI({
@@ -414,7 +431,55 @@ server <- function(input, output)
   #' @importFrom stats lm predict
   shiny::observeEvent(input$click, {
                       dmsg("click with state$stage =", state$stage, "\n")
-                      if (state$stage == 5) {
+                      if (state$stage == 2) {
+                        dmsg("fourCorners=",state$fourCorners, ", x=", input$click$x, ", y=", input$click$y, "\n")
+                        if (state$fourCorners) {
+                          corners(input$click)
+                          print(file=stderr(), corners())
+                          DANcorners<<-corners()
+                          DANimage<<-state$image
+                          C <- corners()
+                          if (length(C$x) == 4) {
+                            ## Convert to image coords (note: first dim is channel)
+                            idim <- dim(state$image[[1]])[-1]
+                            ## FIXME: perhaps we need to trim, in case of a click within a pixel
+                            C$x <- round(idim[1] * C$x)
+                            C$y <- round(idim[2] * C$y)
+                            ## Put corners into a known order
+                            centre <- list(x=mean(C$x), y=mean(C$y))
+                            DANcentre<<-centre
+                            LL <- C$x < centre$x & C$y < centre$y
+                            LR <- C$x > centre$x & C$y < centre$y
+                            UL <- C$x < centre$x & C$y > centre$y
+                            UR <- C$x > centre$x & C$y > centre$y
+                            DANLL<<-LL
+                            DANLR<<-LR
+                            DANUR<<-UR
+                            DANUL<<-UL
+                            ## Original corners, CCW from bottom left
+                            O <- list(x=c(C$x[LL], C$x[LR], C$x[UR], C$x[UL]),
+                                      y=c(C$y[LL], C$y[LR], C$y[UR], C$y[UL]))
+                            DANO <<- O
+                            ## Distorted corners (so output rect contains input rect)
+                            Rx <- range(C$x)
+                            Ry <- range(C$y)
+                            D <- list(x=c(Rx[1], Rx[2], Rx[2], Rx[1]),
+                                      y=c(Ry[1], Ry[1], Ry[2], Ry[2]))
+                            DAND <<- D
+                            ##? P <- c(O$x[1], O$y[1], D$x[1], D$y[1],
+                            ##?        O$x[2], O$y[2], D$x[2], D$y[2],
+                            ##?        O$x[3], O$y[3], D$x[3], D$y[3],
+                            ##?        O$x[4], O$y[4], D$x[4], D$y[4])
+                            P <- c(D$x[1], D$y[1], O$x[1], O$y[1],
+                                   D$x[2], D$y[2], O$x[2], O$y[2],
+                                   D$x[3], D$y[3], O$x[3], O$y[3],
+                                   D$x[4], D$y[4], O$x[4], O$y[4])
+                            DANP <<- P
+                            ##DANimaged<<-image_distort(state$image, 'perspective', P)
+                            state$image <<- image_distort(state$image, 'perspective', P)
+                          }
+                        }
+                      } else if (state$stage == 5) {
                         state$xaxis$device <<- input$click$x
                         state$stage <- 6
                         dmsg("  defined state$xaxis$device[1] as ", state$xaxis$device[1], "\n")
