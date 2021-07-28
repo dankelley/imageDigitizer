@@ -1,5 +1,6 @@
 ## vim:textwidth=128:expandtab:shiftwidth=2:softtabstop=2
 
+
 ##> ## Testing for shearing transform
 ##> library(magick)
 ##> logo <- magick::image_read("logo:")
@@ -20,7 +21,7 @@ library(png)
 
 #options(shiny.error=browser) # this does not seem to do anything useful, for errors I get
 
-default <- list(fourCorners=FALSE)
+default <- list(fourCorners=TRUE)
 
 ## corners() returns a list with the corners in x and y
 ## corners(list(x=A,y=B)) adds a corner
@@ -37,42 +38,37 @@ corners <- local({
   }
 })
 
-
-stageMeanings <- c("Input file",          #  1  stage1button increases stage to  2
-                   "Rotate image",        #  2  stage2button increases stage to  3
-                   "Name x axis",         #  3  stage3button increases stage to  4
-                   "Define low x value",  #  4  stage4button increases stage to  5
-                   "Click low x value",   #  5   mouse click increases stage to  6
-                   "Define high x value", #  6  stage6button increases stage to  7
-                   "Click high x value",  #  7   mouse click increases stage to  8
-                   "Name y axis",         #  8  stage8button increases stage to  9
-                   "Define low y value",  #  9  stage9button increases stage to 10
-                   "Click low y value",   # 10   mouse click increases stage to 11
-                   "Define high y value", # 11 stage11button increases stage to 12
-                   "Click high y value",  # 12   mouse click increases stage to 13
-                   "Digitize Points")     # 13 final stage (FIXME: what about a 'quit' stage?)
+stageMeanings <- c("Input file",          # 1
+                   "Four Corners",        # 2 (OLD "2"="Rotate image",)
+                   "Name x axis",         # 3
+                   "Define low x value",  # 4
+                   "Click low x value",   # 5
+                   "Define high x value", # 6
+                   "Click high x value",  # 7
+                   "Name y axis",         # 8
+                   "Define low y value",  # 9
+                   "Click low y value",   # 10
+                   "Define high y value", # 11
+                   "Click high y value",  # 12
+                   "Digitize Points")     # 13
 
 col <- list(axes="magenta", grid="blue")
 
-debugFlag <- TRUE                      # For console messages that trace control flow.
 version <- "0.1.5"
 keypressHelp <- "
 <i>Keystroke interpretation</i>
 <ul>
+<!--
 <li><b>4</b> select 4 corners</li>
 <li> BROKEN '<b>+</b>': zoom in, centred on mouse location</li>
 <li> BROKEN '<b>-</b>': zoom out</li>
 <li> BROKEN '<b>0</b>': unzoom</li>
-</ul>
-
-<i>Developer plans</i>
-<ul>
-<li> Allow single-scale (like for a map)
-<li> Zooming
-<li> Read analysis file
+-->
+<li> '<b>?</b>': show this message</li>
 </ul>
 "
 
+debugFlag <- TRUE                      # For console messages that trace control flow.
 dmsg <- function(...)
 {
   if (debugFlag)
@@ -86,86 +82,93 @@ ui <- shiny::fluidPage(tags$script('$(document).on("keypress", function (e) { Sh
                        shiny::uiOutput(outputId="title"),
                        shiny::conditionalPanel(condition="output.stage == '1'",
                                                shiny::fluidRow(shiny::uiOutput(outputId="loadFile"))),
-                                               ##shiny::fluidRow(shiny::actionButton("stage1button", "Proceed to Stage 2 (rotating image)"))),
-                       shiny::conditionalPanel(condition="output.stage == '2'",
-                                               shiny::fluidRow(shiny::column(4, shiny::sliderInput("rotate",
-                                                                                                   shiny::h5("Rotate Image [degrees]"),
-                                                                                                   min=-10, max=10, value=0, step=0.1)),
-                                                               shiny::column(4, shiny::sliderInput("shearx",
-                                                                                                   shiny::h5("Shear x"),
-                                                                                                   min=0, max=30, value=0, step=0.1)),
-                                                               shiny::column(4, shiny::sliderInput("sheary",
-                                                                                                   shiny::h5("Shear y"),
-                                                                                                   min=0, max=30, value=0, step=0.1))),
-                                               shiny::fluidRow(shiny::column(3, shiny::actionButton("stage2button", "Next"))),
-                                               shiny::fluidRow(shiny::radioButtons("grid", label=shiny::h5("Grid"),
-                                                                                   choices=c("None"="off", "Fine"="fine",
-                                                                                             "Medium"="medium", "Coarse"="coarse"),
-                                                                                   selected="medium", inline=TRUE))),
+                       shiny::conditionalPanel(condition="output.stage == '92'",
+                                               shiny::fluidRow(shiny::p(paste("Dan 1, Click on the 4 corners of the plot axes")),
+                                                               shiny::plotOutput("plot", click="click", hover="plotHover", height=600))),
+                       ##OLD shiny::conditionalPanel(condition="output.stage == '2'",
+                       ##OLD                         shiny::fluidRow(shiny::column(4, shiny::sliderInput("rotate",
+                       ##OLD                                                                             shiny::h5("Rotate Image [degrees]"),
+                       ##OLD                                                                             min=-10, max=10, value=0, step=0.1)),
+                       ##OLD                                         shiny::column(4, shiny::sliderInput("shearx",
+                       ##OLD                                                                             shiny::h5("Shear x"),
+                       ##OLD                                                                             min=0, max=30, value=0, step=0.1)),
+                       ##OLD                                         shiny::column(4, shiny::sliderInput("sheary",
+                       ##OLD                                                                             shiny::h5("Shear y"),
+                       ##OLD                                                                             min=0, max=30, value=0, step=0.1))),
+                       ##OLD                         shiny::fluidRow(shiny::column(3, shiny::actionButton("stage2button", "Next"))),
+                       ##OLD                         shiny::fluidRow(shiny::radioButtons("grid", label=shiny::h5("Grid"),
+                       ##OLD                                                             choices=c("None"="off", "Fine"="fine",
+                       ##OLD                                                                       "Medium"="medium", "Coarse"="coarse"),
+                       ##OLD                                                             selected="medium", inline=TRUE))),
                        shiny::conditionalPanel(condition="output.stage == '3'",
+                                               shiny::fluidRow(shiny::column(4, shiny::textInput("xname", shiny::h5("X name"))),
+                                                               shiny::column(3, shiny::textInput("xmin", shiny::h5("X min"))),
+                                                               shiny::column(3, shiny::textInput("xmax", shiny::h5("X max")))),
+                                               shiny::fluidRow(shiny::column(4, shiny::textInput("yname", shiny::h5("Y name"))),
+                                                               shiny::column(3, shiny::textInput("ymin", shiny::h5("Y min"))),
+                                                               shiny::column(3, shiny::textInput("ymax", shiny::h5("Y max")))),
+                                               shiny::fluidRow(shiny::actionButton("stage3Abutton", "Next"))),
+                       shiny::conditionalPanel(condition="output.stage == 'OLD3'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("xname", shiny::h5("Name x axis"))),
                                                                shiny::column(6, shiny::actionButton("stage3button",
-                                                                                                    "Poceed to next step",
+                                                                                                    "Next",
                                                                                                     style="margin-top: 50px;")))),
-                       shiny::conditionalPanel(condition="output.stage == '4'",
+                       shiny::conditionalPanel(condition="output.stage == 'OLD4'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("xmin", shiny::h5("A low x value you will click in a moment"))),
                                                                shiny::column(6, shiny::actionButton("stage4button",
                                                                                                     "Next (then click on that value)",
                                                                                                     style="margin-top: 50px;")))),
-                       shiny::conditionalPanel(condition="output.stage == '6'",
+                       shiny::conditionalPanel(condition="output.stage == 'OLD6'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("xmax", shiny::h5("A high x value you will click in a moment"))),
                                                                shiny::column(6, shiny::actionButton("stage6button",
                                                                                                     "Next (then click on that value)",
                                                                                                     style="margin-top: 50px;")))),
-                       shiny::conditionalPanel(condition="output.stage == '8'",
+                       shiny::conditionalPanel(condition="output.stage == 'OLD8'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("yname", shiny::h5("Name y axis"))),
                                                                shiny::column(6, shiny::actionButton("stage8button",
                                                                                                     "Next",
                                                                                                     style="margin-top: 50px;")))),
-                       shiny::conditionalPanel(condition="output.stage == '9'",
+                       shiny::conditionalPanel(condition="output.stage == 'OLD9'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("ymin", shiny::h5("A low y value you will click in a moment"))),
                                                                shiny::column(6, shiny::actionButton("stage9button",
                                                                                                     "Next (then click on that value)",
                                                                                                     style="margin-top: 50px;")))),
                                                ## This button increases stage to 9, and then the click increases it to 10.
-                       shiny::conditionalPanel(condition="output.stage == '11'",
+                       shiny::conditionalPanel(condition="output.stage == 'OLD11'",
                                                shiny::fluidRow(shiny::column(6, shiny::textInput("ymax", shiny::h5("A high y value you will click in a moment"))),
                                                                shiny::column(6, shiny::actionButton("stage11button",
                                                                                                     "Next (then click on that value)",
                                                                                                     style="margin-top: 50px;")))),
-                       shiny::conditionalPanel(condition="output.stage > '12'",
+                       shiny::conditionalPanel(condition="output.stage == '13'",
                                                shiny::fluidRow(shiny::radioButtons("code", label="Symbol code",
                                                                                    choices=1:10, selected=1, inline=TRUE)),
                                                shiny::fluidRow(shiny::column(2, shiny::actionButton("undo", "Undo")),
                                                                shiny::column(2, shiny::actionButton("save", "Save Data")),
                                                                shiny::column(2, shiny::actionButton("Rcode", "R Code")),
                                                                shiny::column(2, shiny::actionButton("quit", "Quit"))),
-                                               shiny::fluidRow(shiny::column(2, shiny::htmlOutput("status")))),
-                       shiny::conditionalPanel(condition="output.stage > '1'",
+                                               shiny::fluidRow(shiny::column(2, shiny::htmlOutput("status"))),
                                                shiny::fluidRow(shiny::plotOutput("plot", click="click", hover="plotHover", height=600))))
 
 server <- function(input, output)
 {
-  state <- shiny::reactiveValues(fourCorners=default$fourCorners,
-    step=1, # 1: need to click to define x axis; 2: need to click to define y axis; 3: acquire data
-    stage=1,
-    shearx=0,
-    sheary=0,
-    rotate=0,
-    inputFile=NULL,
-    image=NULL,
-    xname="x",
-    yname="x",
-    x=list(device=NULL),
-    y=list(device=NULL),
-    code=NULL,
-    xaxis=list(user=NULL, device=NULL),
-    yaxis=list(user=NULL, device=NULL),
-    xaxisModel=NULL,
-    yaxisModel=NULL,
-    xhover=NULL,
-    yhover=NULL
-  )
+  state <- shiny::reactiveValues(step=1,
+                                 stage=1,
+                                 shearx=0,
+                                 sheary=0,
+                                 rotate=0,
+                                 inputFile=NULL,
+                                 image=NULL,
+                                 xname="x",
+                                 yname="x",
+                                 x=list(device=NULL),
+                                 y=list(device=NULL),
+                                 code=NULL,
+                                 xaxis=list(user=NULL, device=NULL),
+                                 yaxis=list(user=NULL, device=NULL),
+                                 xaxisModel=NULL,
+                                 yaxisModel=NULL,
+                                 xhover=NULL,
+                                 yhover=NULL)
 
   saveFile <- function()
   {
@@ -211,29 +214,45 @@ server <- function(input, output)
   })
 
 
+  ##> shiny::observeEvent(input$loadFile, {
+  ##>                     state$stage <<- if (default$fourCorners) "2A" else "2B"
+  ##>                     shiny::insertUI("loadAFile", ui=shiny::fileInput("inputFile", shiny::h5("Input file"), accept=c("image/png")))
+  ##> })
+
   shiny::observeEvent(input$loadFile, {
                       shiny::insertUI("loadAFile", ui=shiny::fileInput("inputFile", shiny::h5("Input file"), accept=c("image/png")))
-  })
-
-  shiny::observeEvent(input$stage1button, {
-                      dmsg("clicked stage1button\n")
                       if (!is.null(state$inputFile)) {
-                        state$stage <<- 2
+                        ##state$stage <<- 2
                       } else {
                         shiny::showNotification("Select a file first, then click 'Proceed to Stage 2'")
                       }
   })
 
+  shiny::observeEvent(input$stage1button, {
+                      dmsg("clicked stage1button\n")
+                      ##? state$stage <<- if (default$fourCorners) "2A" else "2B"
+                      ##? state$stage <<- 2
+  })
+
   shiny::observeEvent(input$stage2button, {
                       dmsg("clicked stage2button\n")
-                      state$stage <<- 3
+                      ##? state$stage <<- 3
   })
 
   shiny::observeEvent(input$stage3button, {
                       dmsg("clicked stage3button\n")
-                      state$xname <<- input$xname
-                      state$stage <<- 4
+                      state$xname <- input$xname
+                      state$xaxis$user <<- c(input$xmin, input$xmax)
+                      state$yname <- input$yname
+                      state$yaxis$user <<- c(input$ymin, input$ymax)
+                      state$stage <<- 12
   })
+
+  ##OLD shiny::observeEvent(input$stage3button, {
+  ##OLD                     dmsg("clicked stage3button\n")
+  ##OLD                     state$xname <<- input$xname
+  ##OLD                     state$stage <<- "4"
+  ##OLD })
 
   shiny::observeEvent(input$stage4button, {
                       dmsg("clicked stage4button\n")
@@ -281,16 +300,7 @@ server <- function(input, output)
                         #if (state$step == 6) {
                           key <- intToUtf8(input$keypress)
                           dmsg("keypress '", input$keypress, "' or '", key, "'\n", sep="")
-                          if (key == '4') {
-                            state$fourCorners <<- !state$fourCorners
-                            dmsg("SWITCH fourCorners to", state$fourCorners, "\n")
-                          } else if (key == '+') {
-                            dmsg("BROKEN: should zoom in now\n")
-                          } else if (key == '-') {
-                            dmsg("BROKEN: should zoom out now\n")
-                          } else if (key == '0') {
-                            dmsg("BROKEN: should unzoom now\n")
-                          } else if (key == '?') {
+                          if (key == '?') {
                             shiny::showModal(shiny::modalDialog( title="", shiny::HTML(keypressHelp), easyClose=TRUE))
                           }
                         #}
@@ -336,15 +346,16 @@ server <- function(input, output)
 
 
   output$title <- shiny::renderUI({
+    dmsg("in $title\n")
     shiny::h5(paste0("imageDigitizer ", version,
                      ifelse(is.null(state$inputFile), "", paste0(" | File '", state$inputFile, "'")),
-                     " | Processing stage ", state$stage, " (", stageMeanings[state$stage], "); fourCorners=", state$fourCorners))
+                     " | Processing stage ", state$stage, " (", stageMeanings[state$stage], ")"))
   })
 
   output$loadFile <- shiny::renderUI({
     if (state$stage == 1) {
       shiny::fileInput("inputFile", shiny::h5("Input file"), accept=c("image/png"))
-      #state$stage <<- 2
+      ## state$stage <<- 2
     }
   })
 
@@ -432,8 +443,8 @@ server <- function(input, output)
   shiny::observeEvent(input$click, {
                       dmsg("click with state$stage =", state$stage, "\n")
                       if (state$stage == 2) {
-                        dmsg("fourCorners=",state$fourCorners, ", x=", input$click$x, ", y=", input$click$y, "\n")
-                        if (state$fourCorners) {
+                        dmsg("at stage 2 with click at x=", input$click$x, ", y=", input$click$y, "\n")
+                        if (default$fourCorners) {
                           corners(input$click)
                           print(file=stderr(), corners())
                           DANcorners<<-corners()
@@ -477,8 +488,11 @@ server <- function(input, output)
                             DANP <<- P
                             ##DANimaged<<-image_distort(state$image, 'perspective', P)
                             state$image <<- image_distort(state$image, 'perspective', P)
+                            state$stage <<- 3
                           }
                         }
+                      } else if (state$stage == 2) {
+                        dmsg("NOT HANDLED\n")
                       } else if (state$stage == 5) {
                         state$xaxis$device <<- input$click$x
                         state$stage <- 6
@@ -503,7 +517,7 @@ server <- function(input, output)
                         state$yaxisModel <<- lm(user ~ device, data=state$yaxis)
                         dmsg("next is state$yaxisModel\n")
                         if (debugFlag) print(file=stderr(), state$yaxisModel)
-                        state$stage <- 13
+                        state$stage <- "13"
                         dmsg("  defined state$yaxis$device[2] as ", state$yaxis$device[2], "\n")
                         shiny::showNotification("Now, start clicking points to digitize them.")
                       } else if (state$stage == 13) { # digitizing points
@@ -564,11 +578,11 @@ server <- function(input, output)
   ## @importFrom png readPNG
   #' @importFrom magick image_read
   shiny::observeEvent(input$inputFile, {
-    state$inputFile <- input$inputFile
+    state$inputFile <<- input$inputFile
     ##state$image <- png::readPNG(state$inputFile$datapath)
-    state$image <- magick::image_read(state$inputFile$datapath)
-    state$imageExists <- TRUE
-    state$stage <- 2
+    state$image <<- magick::image_read(state$inputFile$datapath)
+    state$imageExists <<- TRUE
+    ## state$stage <- if (default$fourCorners) "2A" else "2B"
     dmsg("state$imageExists=", state$imageExists, "\n")
   })
 
@@ -612,7 +626,7 @@ server <- function(input, output)
 
   output$stage <- shiny::reactive({
     dmsg("output$stage is returning ", state$stage, " based on state$stage\n", sep="")
-    as.numeric(state$stage)
+    as.integer(state$stage)
   })
 
   shiny::outputOptions(output, "stage", suspendWhenHidden=FALSE)
@@ -628,8 +642,10 @@ server <- function(input, output)
 #' A shiny graphical user interface (GUI) for digitizing points in images, by
 #' means of mouse clicks. The GUI is meant to be reasonably self-explanatory.
 #' @export
-imageDigitizer <- function()
+imageDigitizer <- function(fourCorners=TRUE)
 {
-    shiny::shinyApp(ui, server)        #) #options=list(test.mode=TRUE))
+  default$fourCorners <- fourCorners
+  options(shiny.trace=TRUE)
+  shiny::shinyApp(ui, server)
 }
 
