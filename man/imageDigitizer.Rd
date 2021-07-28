@@ -4,7 +4,10 @@
 \alias{imageDigitizer}
 \title{R/shiny app for digitizing points in images.}
 \usage{
-imageDigitizer()
+imageDigitizer(fourCorners = TRUE)
+}
+\arguments{
+\item{fourCorners}{logical value indicating (FIXME: describe this ... if we keep it!)}
 }
 \description{
 A shiny graphical user interface (GUI) for digitizing points in images, by

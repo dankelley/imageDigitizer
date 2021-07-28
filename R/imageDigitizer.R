@@ -487,7 +487,7 @@ server <- function(input, output)
                                    D$x[4], D$y[4], O$x[4], O$y[4])
                             DANP <<- P
                             ##DANimaged<<-image_distort(state$image, 'perspective', P)
-                            state$image <<- image_distort(state$image, 'perspective', P)
+                            ##state$image <<- image_distort(state$image, 'perspective', P)
                             state$stage <<- 3
                           }
                         }
@@ -641,6 +641,8 @@ server <- function(input, output)
 #'
 #' A shiny graphical user interface (GUI) for digitizing points in images, by
 #' means of mouse clicks. The GUI is meant to be reasonably self-explanatory.
+#'
+#' @param fourCorners logical value indicating (FIXME: describe this ... if we keep it!)
 #' @export
 imageDigitizer <- function(fourCorners=TRUE)
 {
