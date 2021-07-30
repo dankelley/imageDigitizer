@@ -106,10 +106,10 @@ server <- function(input, output)
         file
     }
 
-    #>output$loadFile <- renderUI({
-    #>    if (state$stage == 1L)
-    #>        insertUI("loadAFile", ui=fileInput("inputFile", h5("Input file"), accept=c("image/png")))
-    #>})
+    output$loadFile <- renderUI({
+        if (state$stage == 1L)
+            insertUI("loadAFile", ui=fileInput("inputFile", h5("Input file"), accept=c("image/png")))
+    })
 
     output$showImage <- renderUI({
         if (state$stage > 1L)
@@ -137,11 +137,11 @@ server <- function(input, output)
     })
 
     output$enterAxisNames<- renderUI({
-        dmsg("in output$enterAxisNames (state$stage=", state$stage, ")\n", sep="")
         if (state$stage == 3L) {
+            dmsg("in output$enterAxisNames (state$stage=", state$stage, ")\n", sep="")
             fluidRow(
-                column(4, textInput("xname", h5("Name x axis"))),
-                column(4, textInput("yname", h5("Name y axis"))),
+                column(4, textInput("xname", h5("Name x axis"), state$xname)),
+                column(4, textInput("yname", h5("Name y axis"), state$yname)),
                 actionButton("finishedGetAxisNames", "Done"))
         }
     })
@@ -189,7 +189,7 @@ server <- function(input, output)
 
     output$undoSaveCodeQuit <- renderUI({
         if (state$stage == 10L) {
-            dmsg("in output$saveCodeQuit (state$stage=", state$stage, ")\n", sep="")
+            dmsg("in output$undoSaveCodeQuit (state$stage=", state$stage, ")\n", sep="")
             fluidRow(
                 actionButton("undoButton", "Undo"),
                 actionButton("saveButton", "Save"),
@@ -224,7 +224,7 @@ server <- function(input, output)
         saveFile()
         stopApp()
     })
- 
+
     observeEvent(input$keypressTrigger, {
         key <- intToUtf8(input$keypress)
         if (key == 'd') {
@@ -254,22 +254,23 @@ server <- function(input, output)
             #msg <- paste0(msg, " | File '", "?", "'")
             if (state$stage < 10) {
                 msg <- paste0(msg, " | Step ", state$stage, " (", stageMeanings[state$stage], ")")
-                #msg <- paste0(msg, " | Step ", 321, " (?)")#, stageMeanings[state$stage], ")")
             } else {
                 msg <- paste0(msg, " | Digitized ", length(state$x$device), " points")
-                #msg <- paste0(msg, " | Digitized ", 123, " points")
             }
         }
         return(msg)
     })
 
     output$status <- renderUI({
-        if (state$stage >= 10L) {
-            #.sprintf("device: %.3f %.3f. User: %4g %4g",
-            #.    input$plotHover$x, input$plotHover$y, 0,0) # FIXME
-            #unname(predict(state$xaxisModel, data.frame(device=input$plotHover$x))),
-            #unname(predict(state$yaxisModel, data.frame(device=input$plotHover$y))))
-            "FIXME: put status here"
+        if (state$stage == 10L) {
+            if (is.null(input$plotHover$x)) {
+                " "                    # avoid redrawing plot when mouse enters/leave it
+            } else {
+                sprintf("device %.3g %.3g; user %.3g %.3g",
+                    input$plotHover$x, input$plotHover$y,
+                    unname(predict(state$xaxisModel, data.frame(device=input$plotHover$x))),
+                    unname(predict(state$yaxisModel, data.frame(device=input$plotHover$y))))
+            }
         }
     })
 
@@ -369,6 +370,8 @@ server <- function(input, output)
             dmsg("xaxisModel coef:", paste(coef(state$xaxisModel), collapse=" "), "\n")
             state$yaxisModel <- lm(user ~ device, data=state$yaxis)
             dmsg("yaxisModel coef:", paste(coef(state$yaxisModel), collapse=" "), "\n")
+            #<test> X<-state$xaxisModel;save(X, file="/Users/kelley/danX.rda")
+            #<test> Y<-state$yaxisModel;save(Y, file="/Users/kelley/danY.rda")
             state$stage <- 10L           # prepare for next: digitize points on graph
             showNotification("Click on points to digitize them", type="message", closeButton=TRUE)
         } else if (state$stage == 10L) { # digitizing points
@@ -384,13 +387,13 @@ server <- function(input, output)
         }
     })
 
-    output$status <- renderText({
-        if (state$stage == 10L) {
-            x <- unname(predict(state$xaxisModel, data.frame(device=input$plotHover$x)))
-            y <- unname(predict(state$yaxisModel, data.frame(device=input$plotHover$y)))
-            h5(sprintf("Hover: x=%g, y=%g", x, y))
-        }
-    })
+    #<old>output$status <- renderText({
+    #<old>    if (state$stage == 10L) {
+    #<old>        x <- unname(predict(state$xaxisModel, data.frame(device=input$plotHover$x)))
+    #<old>        y <- unname(predict(state$yaxisModel, data.frame(device=input$plotHover$y)))
+    #<old>        h5(sprintf("Hover: x=%g, y=%g", x, y))
+    #<old>    }
+    #<old>})
 
     ## Image transformations chosen by user to establish orthogonal x and y axes
     observeEvent(input$rotate, { state$rotate <- input$rotate })
