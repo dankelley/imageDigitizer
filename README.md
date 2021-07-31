@@ -1,9 +1,24 @@
-`imageDigitizer` is an R shiny app that can be used to digitize points on a
-graph that is contained in a PNG image. Here's how to get started:
+imageDigitizer is an R shiny app that can be used to digitize points in a PNG
+image.
 
-1. Copy a `.png` file here. It should contain a graph that uses linear axes.
+# Installation
 
-2. Type `"library(imageDigitize);imageDigitize()` in an R console.
+The package may be installed by typing
 
-3. Follow the directions you see in the control panels.
+    remotes::install_github("dankelley/imageDigitizer")
+
+in an R console.
+
+# Usage
+
+Run the main function by typing
+
+    library(imageDigitizer)
+    imageDigitizer()
+
+in an R console.  The GUI has elements to guide you through the process. If you
+make an error, use the `Undo` button to remove the most recently added point.
+Use the `Save` button to save the results to a text file that has a name
+patterned on the name of the PNG file.  Use the `Code` button to view a snippet
+of R code that can read this file, and plot the results.
 
