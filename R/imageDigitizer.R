@@ -2,6 +2,10 @@
 
 library(png)
 
+debugFlagDefault <- FALSE              # For console messages that trace control flow.
+colPoints <- 2                         # FIXME: let user specify this
+cexPoints <- 1                         # FIXME: let user specify this
+
 options(shiny.error=browser)
 stageMeanings <- c("Input file",       # stage  1
     "Rotate image",                    # stage  2
@@ -21,33 +25,17 @@ keypressHelp <- "
 <i>Keystroke interpretation</i>
 <ul>
 <li> '<b>p</b>': toggle printing of debugging information to the R console
-<li> '<b>+</b>': zoom in, centred on mouse location
-<li> '<b>-</b>': zoom out
-<li> '<b>0</b>': unzoom
-</ul>
-
-<i>Developer plans</i>
-<ul>
-<li> Allow single-scale (like for a map)
-<li> Zooming
-<li> Read analysis file
+<li> '<b>+</b>': zoom in, centred on mouse location [FIXME: implement this]
+<li> '<b>-</b>': zoom out [FIXME: implement this]
+<li> '<b>0</b>': unzoom [FIXME: implement this]
 </ul>
 "
-
-debugFlag <- TRUE                      # For console messages that trace control flow.
-
-dmsg <- function(...)
-{
-    if (debugFlag)
-        cat(file=stderr(), ...)
-}
 
 fileLoaded <- FALSE
 
 ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onInputChange("keypress", e.which); Shiny.onInputChange("keypressTrigger", Math.random()); });'),
     style="margin-left:2ex",
     uiOutput(outputId="title"),
-    uiOutput(outputId="status"),
     uiOutput(outputId="loadFile"),
     uiOutput(outputId="grid"),
     uiOutput(outputId="rotateImage"),
@@ -59,6 +47,12 @@ ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onI
 
 server <- function(input, output)
 {
+    debugFlag <- debugFlagDefault
+    dmsg <- function(...)
+    {
+        if (debugFlag)
+            cat(file=stderr(), ...)
+    }
     state <- reactiveValues(
         stage=1,
         shearx=0,
@@ -68,40 +62,32 @@ server <- function(input, output)
         image=NULL,
         xname="x",
         yname="y",
-        x=list(device=NULL),
-        y=list(device=NULL),
-        code=1,
-        xaxis=list(user=NULL, device=NULL),
-        yaxis=list(user=NULL, device=NULL),
-        xaxisModel=NULL,
-        yaxisModel=NULL,
-        xhover=NULL,
-        yhover=NULL)
+        xdevice=NULL,
+        ydevice=NULL,
+        code=NULL,
+        xaxis=list(user=NULL, device=NULL, slope=NULL, user0=NULL, device0=NULL),
+        yaxis=list(user=NULL, device=NULL, slope=NULL, user0=NULL, device0=NULL))
 
     saveFile <- function()
     {
         file <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
-        cat(paste("# imageDigitizer version ", version, "\n", sep = ""), file=file)
-        cat(paste("# file: ", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
-        cat(paste("# rotation: ", state$rotate, "\n", sep=""), file=file, append=TRUE)
-        if (length(state$xaxis$device)) {
-            cat(paste("# x axis device: ", paste(state$xaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-            cat(paste("# x axis user:   ", paste(state$xaxis$user,   collapse=" "), "\n", sep=""), file=file, append=TRUE)
-            cat(paste("# y axis device: ", paste(state$yaxis$device, collapse=" "), "\n", sep=""), file=file, append=TRUE)
-            cat(paste("# y axis user:   ", paste(state$yaxis$user,   collapse=" "), "\n", sep=""), file=file, append=TRUE)
-        }
-        if (nchar(state$xname) < 1)
-            state$xname <- "x"
-        if (nchar(state$yname) < 1)
-            state$yname <- "y"
+        cat(paste("# imageDigitizer: ", version,              "\n", sep=""), file=file)
+        cat(paste("# file:           ", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
+        cat(paste("# rotation:       ", state$rotate,         "\n", sep=""), file=file, append=TRUE)
+        cat(paste("# xaxis$user0:    ", state$xaxis$user0,    "\n", sep=""), file=file, append=TRUE)
+        cat(paste("# xaxis$device0:  ", state$xaxis$device0,  "\n", sep=""), file=file, append=TRUE)
+        cat(paste("# xaxis$slope:    ", state$xaxis$slope,    "\n", sep=""), file=file, append=TRUE)
+        cat(paste("# yaxis$user0:    ", state$yaxis$user0,    "\n", sep=""), file=file, append=TRUE)
+        cat(paste("# yaxis$device0:  ", state$yaxis$device0,  "\n", sep=""), file=file, append=TRUE)
+        cat(paste("# yaxis$slope:    ", state$yaxis$slope,    "\n", sep=""), file=file, append=TRUE)
         cat(sprintf("i,devicex,devicey,%s,%s,code\n", state$xname, state$yname), file=file, append=TRUE)
-        # FIXME
-        #xuser <- predict(state$xaxisModel, data.frame(device=state$x$device))
-        #yuser <- predict(state$yaxisModel, data.frame(device=state$y$device))
-        xuser <- seq_along(state$x$device)
-        yuser <- xuser/10
-        for (i in seq_along(state$x$device)) {
-            cat(sprintf("%3d,%10.3f,%10.3f,%20g,%20g,%d\n", i, state$x$device[i], state$y$device[i], xuser[i], yuser[i],state$code[i]), file=file, append=TRUE)
+        if (length(state$xaxis$device)) {
+            x <- state$xaxis$user0 + state$xaxis$slope * (state$xdevice - state$xaxis$device0)
+            y <- state$yaxis$user0 + state$yaxis$slope * (state$ydevice - state$yaxis$device0)
+            for (i in seq_along(state$xdevice)) {
+                cat(sprintf("%d,%.4f,%.4f,%.4g,%.4g,%d\n",
+                        i, state$xdevice[i], state$ydevice[i], x[i], y[i],state$code[i]), file=file, append=TRUE)
+            }
         }
         file
     }
@@ -147,8 +133,11 @@ server <- function(input, output)
     })
 
     observeEvent(input$finishedGetAxisNames, { # at stage 4 (invisible to user)
-        state$xname <- input$xname
-        state$yname <- input$yname
+        # refuse to accept zero-length names, retaining defaults ('x' and 'y') if so
+        if (nchar(input$xname))
+            state$xname <- input$xname
+        if (nchar(input$yname))
+            state$yname <- input$yname
         dmsg("clicked finishedGetAxisNames button  (state$xname=\"", state$xname, "\" and state$yname=\"", state$yname, "\"; set state$stage=", state$stage, ")\n", sep="")
         state$stage <- 4L            # prepare for next
     })
@@ -194,15 +183,16 @@ server <- function(input, output)
                 actionButton("undoButton", "Undo"),
                 actionButton("saveButton", "Save"),
                 actionButton("codeButton", "Code"),
-                actionButton("quitButton", "Quit"))
+                actionButton("quitButton", "Quit"),
+                radioButtons("pch", "Plot symbol code", choices=1:20, selected=1, inline=TRUE))
         }
     })
 
     #' @importFrom utils head
     observeEvent(input$undoButton, {
-        if (length(state$x$device) > 0) {
-            state$x$device <- head(state$x$device, -1)
-            state$y$device <- head(state$y$device, -1)
+        if (length(state$xdevice) > 0) {
+            state$xdevice <- head(state$xdevice, -1)
+            state$ydevice <- head(state$ydevice, -1)
             state$code <- head(state$code, -1)
         }
     })
@@ -215,7 +205,7 @@ server <- function(input, output)
     observeEvent(input$codeButton, {
         ofile <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
         msg <- "# Sample code to read and plot the saved data file<br>\n"
-        msg <- paste0(msg, "data <- read.csv(file=\"", ofile, "\", skip=7, header=TRUE)<br>\n")
+        msg <- paste0(msg, "data <- read.csv(file=\"", ofile, "\", skip=9, header=TRUE)<br>\n")
         msg <- paste0(msg, "plot(", "data[[\"", state$xname, "\"]],", "data[[\"", state$yname, "\"]],", "xlab=\"", state$xname, "\",", "ylab=\"", state$yname, "\",", "pch=data$code)<br>\n")
         showModal(modalDialog(HTML(msg), title="R code", size="l"))
     })
@@ -228,11 +218,12 @@ server <- function(input, output)
     observeEvent(input$keypressTrigger, {
         key <- intToUtf8(input$keypress)
         if (key == 'd') {
-            debugFlag <- !debugFlag
+            debugFlag <<- !debugFlag
         } else if (state$stage > 9L) {
-            dmsg("keypress numerical value ", input$keypress, ", i.e. key='", key, "'\n", sep="")
+            #dmsg("keypress numerical value ", input$keypress, ", i.e. key='", key, "'\n", sep="")
             if (key == 'd') {
                 debugFlag <- !debugFlag
+                cat(file=stderr(), "now, debugFlag=", debugFlag, "\n")
             } else if (key == '+') {
                 dmsg("should zoom in now\n")
             } else if (key == '-') {
@@ -248,30 +239,23 @@ server <- function(input, output)
     output$title <- renderUI({
         msg <- paste0("imageDigitizer ", version)
         if (!is.null(state$inputFile)) {
-            #print(file=stderr(), state$inputFile)
-            #cat(file=stderr(), "file '", state$inputFile$name,"'\n",sep="")
             msg <- paste0(msg, " | File '", state$inputFile$name, "'")
-            #msg <- paste0(msg, " | File '", "?", "'")
             if (state$stage < 10) {
                 msg <- paste0(msg, " | Step ", state$stage, " (", stageMeanings[state$stage], ")")
             } else {
-                msg <- paste0(msg, " | Digitized ", length(state$x$device), " points")
+                npts <- length(state$xdevice)
+                msg <- paste0(msg, " | Digitized ", npts, if (npts!=1L) " points" else " point")
+                if (!is.null(input$plotHover$x)) {
+                    msg <- paste0(msg,
+                        sprintf(" | Hover: %s=%.3g, %s=%.3g",
+                            state$xname,
+                            with(state$xaxis, user0+slope*(input$plotHover$x-device0)),
+                            state$yname,
+                            with(state$yaxis, user0+slope*(input$plotHover$y-device0))))
+                }
             }
         }
         return(msg)
-    })
-
-    output$status <- renderUI({
-        if (state$stage == 10L) {
-            if (is.null(input$plotHover$x)) {
-                " "                    # avoid redrawing plot when mouse enters/leave it
-            } else {
-                sprintf("device %.3g %.3g; user %.3g %.3g",
-                    input$plotHover$x, input$plotHover$y,
-                    unname(predict(state$xaxisModel, data.frame(device=input$plotHover$x))),
-                    unname(predict(state$yaxisModel, data.frame(device=input$plotHover$y))))
-            }
-        }
     })
 
     output$loadFile <- renderUI({
@@ -305,8 +289,6 @@ server <- function(input, output)
                 I <- magick::image_rotate(I, state$rotate)
             }
             rasterImage(I, 0, 0, 1, 1, interpolate=FALSE)
-            ##rasterImage(state$image, 0, 0, 1, 1, angle=-state$rotate, interpolate=FALSE)
-            #dmsg("rotate=", state$rotate, ", shearx=", state$shearx, ", sheary=", state$sheary, "\n", sep="")
             if (input$grid == "fine") {
                 abline(h=seq(-3, 3, 0.05), col=col$grid, lty="dotted")
                 abline(v=seq(-3, 3, 0.05 * asp), col=col$grid, lty="dotted")
@@ -333,8 +315,8 @@ server <- function(input, output)
                     mtext(state$yaxis$user[2], side=4, at=state$yaxis$device[2], col=col$axes)
                 }
             }
-            if (length(state$x$device)) {
-                points(state$x$device, state$y$device, pch=state$code, col="red")
+            if (length(state$xdevice)) {
+                points(state$xdevice, state$ydevice, pch=state$code, col=colPoints, cex=cexPoints)
             }
         }
     })
@@ -343,12 +325,6 @@ server <- function(input, output)
         saveFile()
     })
 
-    observeEvent(input$plotHover, {
-        state$xhover <- input$plotHover$x
-        state$yhover <- input$plotHover$y
-    })
-
-    #' @importFrom stats coef lm predict
     observeEvent(input$click, {
         dmsg("click with state$stage =", state$stage, "\n")
         if (state$stage == 5L) {
@@ -366,56 +342,46 @@ server <- function(input, output)
         } else if (state$stage == 9L) {
             state$yaxis$device[2] <- input$click$y
             dmsg("defined state$yaxis$device[2] as ", state$yaxis$device[2], "\n")
-            state$xaxisModel <- lm(user ~ device, data=state$xaxis)
-            dmsg("xaxisModel coef:", paste(coef(state$xaxisModel), collapse=" "), "\n")
-            state$yaxisModel <- lm(user ~ device, data=state$yaxis)
-            dmsg("yaxisModel coef:", paste(coef(state$yaxisModel), collapse=" "), "\n")
-            #<test> X<-state$xaxisModel;save(X, file="/Users/kelley/danX.rda")
-            #<test> Y<-state$yaxisModel;save(Y, file="/Users/kelley/danY.rda")
+            # Save 3 items (built up from 2) to make it easier to code equal-scale cases
+            # We will later use e.g.
+            # x <- with(state$xaxis, user0+slope*(input$mouse$x-device0))
+            if (all(is.finite(state$xaxis$user))) {
+                state$xaxis$user0 <- with(state$xaxis, user[1])
+                state$xaxis$device0 <- with(state$xaxis, device[1])
+                state$xaxis$slope <- with(state$xaxis, (user[2]-user[1])/(device[2]-device[1]))
+            } else {
+                stop("cannot handle single-point x models yet")
+            }
+            if (all(is.finite(state$yaxis$user))) {
+                state$yaxis$user0 <- with(state$yaxis, user[1])
+                state$yaxis$device0 <- with(state$yaxis, device[1])
+                state$yaxis$slope <- with(state$yaxis, (user[2]-user[1])/(device[2]-device[1]))
+            } else {
+                stop("cannot handle single-point y models yet")
+            }
             state$stage <- 10L           # prepare for next: digitize points on graph
             showNotification("Click on points to digitize them", type="message", closeButton=TRUE)
         } else if (state$stage == 10L) { # digitizing points
-            state$x$device <<- c(state$x$device, input$click$x)
-            state$y$device <<- c(state$y$device, input$click$y)
-            state$code <<- c(state$code, as.numeric(1)) # FIXME: add menu item for code
-            ##dmsg("Next is input$code\n")
-            ##if (debugFlag) print(file=stderr(), input$code)
-            n <- length(state$x$device)
-            dmsg("  defined i-th point as c(", state$x$device[n], ",", state$y$device[n], ") in device coordinates\n")
-            ### } else {
-            ###   stop("programming error in click (unknown state$stage=", state$stage, ")")
+            state$xdevice <- c(state$xdevice, input$click$x)
+            state$ydevice <- c(state$ydevice, input$click$y)
+            state$code <- c(state$code, as.integer(input$pch))
+            n <- length(state$xdevice)
+            dmsg("  defined ", n, "-th point as c(", state$xdevice[n], ",", state$ydevice[n], ") in device coordinates\n", sep="")
         }
     })
 
-    #<old>output$status <- renderText({
-    #<old>    if (state$stage == 10L) {
-    #<old>        x <- unname(predict(state$xaxisModel, data.frame(device=input$plotHover$x)))
-    #<old>        y <- unname(predict(state$yaxisModel, data.frame(device=input$plotHover$y)))
-    #<old>        h5(sprintf("Hover: x=%g, y=%g", x, y))
-    #<old>    }
-    #<old>})
-
     ## Image transformations chosen by user to establish orthogonal x and y axes
     observeEvent(input$rotate, { state$rotate <- input$rotate })
-    observeEvent(input$shearx, { state$shearx <- input$shearx })
-    observeEvent(input$sheary, { state$sheary <- input$sheary })
+    #<idea> observeEvent(input$shearx, { state$shearx <- input$shearx })
+    #<idea> observeEvent(input$sheary, { state$sheary <- input$sheary })
 
     ## @importFrom png readPNG
     #' @importFrom magick image_read
     observeEvent(input$inputFile, {
         state$inputFile <- input$inputFile
-        ##state$image <- png::readPNG(state$inputFile$datapath)
         state$image <- magick::image_read(state$inputFile$datapath)
         state$stage <- 2               # prepare for next
     })
-
-    #? observeEvent(input$xname, {
-    #?     state$xname <- input$xname
-    #? })
-
-    #? observeEvent(input$yname, {
-    #?     state$yname <- input$yname
-    #? })
 
     output$readImage <- renderUI({
         fileInput("inputFile", h5("Please select an input file"), accept=c("image/png"))
@@ -427,12 +393,19 @@ server <- function(input, output)
 #'
 #' A shiny graphical user interface (GUI) for digitizing points in images, by
 #' means of mouse clicks. The GUI is meant to be reasonably self-explanatory.
+#'
+#' @section Developer plans:
+#'
+#' 1. Allow single-scale (like for a map)
+#' 2. Zooming
+#' 3. Read analysis file (to carry on with a previous analysis)
+#'
 #' @importFrom shiny actionButton column fileInput fluidRow h5 HTML insertUI modalDialog observeEvent outputOptions plotOutput radioButtons
 #' reactiveValues renderPlot renderText renderUI shinyApp showModal showNotification sliderInput stopApp textInput
 #' 
 #' @export
 imageDigitizer <- function()
 {
-    shinyApp(ui, server)        #) #options=list(test.mode=TRUE))
+    shinyApp(ui, server)
 }
 

@@ -10,3 +10,12 @@ imageDigitizer()
 A shiny graphical user interface (GUI) for digitizing points in images, by
 means of mouse clicks. The GUI is meant to be reasonably self-explanatory.
 }
+\section{Developer plans}{
+
+\enumerate{
+\item Allow single-scale (like for a map)
+\item Zooming
+\item Read analysis file (to carry on with a previous analysis)
+}
+}
+

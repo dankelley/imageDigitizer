@@ -1,8 +1,8 @@
 TO DO
 
-* [x] 1. "Undo" operation (visible at stage 10).
-* [ ] 2. "Undo" key (visible at stage 10).
-* [x] 3. "Save" operation (visible at stage 10)
-* [ ] 4. Shearing (?)
-* [ ] 5. Let user specify pch
+* [ ] perhaps add sliders to let users alter shear.  This might help with
+  distorted photocopies of figures from papers. I've coded this before (in
+commits prior to July 2021), so I could add it again, but I prefer to wait to
+encounter a case in which it would help.
+
 
