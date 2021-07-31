@@ -151,7 +151,7 @@ server <- function(input, output)
                 actionButton("finishedGetXLimits", "Done"))
         }
     })
- 
+
     observeEvent(input$finishedGetXLimits, { # at stage 5 (which is noticed by output$click, which also catches stage 6)
         state$xaxis$user <- as.numeric(c(input$xlow, input$xhigh))
         dmsg("clicked finishedGetXLimits button  (state$stage=", state$stage, ")\n", sep="")
@@ -168,7 +168,7 @@ server <- function(input, output)
                 actionButton("finishedGetYLimits", "Done"))
         }
     })
- 
+
     observeEvent(input$finishedGetYLimits, { # sets state$stage to 8 (which is noticed by output$click, which also forms stage 9)
         state$yaxis$user <- as.numeric(c(input$ylow, input$yhigh))
         dmsg("clicked finishedGetYLimits button  (state$stage=", state$stage, ")\n", sep="")
@@ -177,14 +177,38 @@ server <- function(input, output)
     })
 
     output$undoSaveCodeQuit <- renderUI({
-        if (state$stage == 10L) {
+        if (state$stage == 1L) { # 10L
             dmsg("in output$undoSaveCodeQuit (state$stage=", state$stage, ")\n", sep="")
+            pchChoiceValues <- as.character(1:20)
             fluidRow(
                 actionButton("undoButton", "Undo"),
                 actionButton("saveButton", "Save"),
                 actionButton("codeButton", "Code"),
                 actionButton("quitButton", "Quit"),
-                radioButtons("pch", "Plot symbol code", choices=1:20, selected=1, inline=TRUE))
+                column(width=12,
+                    tags$div(HTML('<div id="pch2" class="form-group shiny-input-radiogroup shiny-input-container shiny-input-container-inline">
+                            <label class="control-label" for="test">Plot symbol</label>
+                            <div class="shiny-options-group">
+
+                            <label class="radio-inline"> <input type="radio" name="test" value="1"/> <span><img src="pch_01.png" alt="1"/></span> </label>
+
+                            <label class="radio-inline"> <input type="radio" name="test" value="2"/> <span><img src="pch_02.png" alt="2"/></span> </label>
+
+                            <label class="radio-inline"> <input type="radio" name="test" value="3"/> <span><img src="pch_03.png" alt="3"/></span> </label>
+
+                            <label class="radio-inline"> <input type="radio" name="test" value="4"/> <span><img src="pch_04.png" alt="4"/></span> </label>
+
+                            </div>
+                            </div> ')),
+                            br(),
+                            h3(textOutput('selected'))
+                            ),
+                radioButtons("pch", "Plot symbol code",
+                    selected="1", inline=TRUE,
+                    choiceValues=pchChoiceValues,
+                    #choiceNames=lapply(pchChoiceValues, function(i) paste0("<img src=\"pch_",i,".png\">")))
+                    choiceNames=lapply(pchChoiceValues, function(i) img("src=\"pch_",i,".png\"")))
+                )
         }
     })
 
@@ -199,7 +223,7 @@ server <- function(input, output)
 
     observeEvent(input$saveButton, {
         name <- saveFile()
-        showNotification(paste0("File '", name, "' saved"), type="message")
+        showNotification(paste0("File '", name, "' saved"), type="message", duration=1)
     })
 
     observeEvent(input$codeButton, {
@@ -231,13 +255,14 @@ server <- function(input, output)
             } else if (key == '0') {
                 dmsg("should unzoom now\n")
             } else if (key == '?') {
-                showModal(modalDialog( title="", HTML(keypressHelp), easyClose=TRUE))
+                showModal(modalDialog(title="", HTML(keypressHelp), easyClose=TRUE))
             }
         }
     })
 
     output$title <- renderUI({
         msg <- paste0("imageDigitizer ", version)
+        msg <- paste0(msg, "(", input$pch2, ")")
         if (!is.null(state$inputFile)) {
             msg <- paste0(msg, " | File '", state$inputFile$name, "'")
             if (state$stage < 10) {
@@ -400,12 +425,16 @@ server <- function(input, output)
 #' 2. Zooming
 #' 3. Read analysis file (to carry on with a previous analysis)
 #'
-#' @importFrom shiny actionButton column fileInput fluidRow h5 HTML insertUI modalDialog observeEvent outputOptions plotOutput radioButtons
-#' reactiveValues renderPlot renderText renderUI shinyApp showModal showNotification sliderInput stopApp textInput
-#' 
+#' @importFrom shiny actionButton column fileInput fluidRow h5 HTML img insertUI modalDialog
+#' observeEvent outputOptions plotOutput radioButtons reactiveValues renderPlot renderText
+#' renderUI shinyApp showModal showNotification sliderInput stopApp textInput
+#' br h3 tags textOutput
+#'
 #' @export
 imageDigitizer <- function()
 {
-    shinyApp(ui, server)
+    print(shinyApp(ui=ui, server=server))
 }
+
+#shinyApp(ui=imageDigitizer:::ui,server=imageDigitizer:::server)
 

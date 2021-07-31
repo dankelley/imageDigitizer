@@ -1,3 +1,4 @@
+.github
 chankillo_map.png
 ^README_developer.md$
 ^.*.dat$
@@ -8,3 +9,4 @@ testr.png
 ^\.Rproj\.user$
 imageDigitizer.Rproj
 .Rbuildignore
+developer
