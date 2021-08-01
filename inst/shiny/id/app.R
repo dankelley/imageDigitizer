@@ -188,24 +188,24 @@ server <- function(input, output)
                 actionButton("codeButton", "Code"),
                 actionButton("quitButton", "Quit"),
                 column(width=12,
-                    tags$div(HTML('<div id="pch2" class="form-group shiny-input-radiogroup shiny-input-container shiny-input-container-inline">
-                            <label class="control-label" for="pch2">Plot symbol</label>
+                    tags$div(HTML('<div id="pch" class="form-group shiny-input-radiogroup shiny-input-container shiny-input-container-inline">
+                            <label class="control-label" for="pch">Plot symbol</label>
                             <div class="shiny-options-group">
 
-                            <label class="radio-inline"> <input type="radio" name="pch2" value="1"/> <span><img src="/pch_01.png" alt="1"/></span> </label>
+                            <label class="radio-inline"> <input type="radio" name="pch" value="1"/> <span><img src="/pch_01.png" alt="1"/></span> </label>
 
-                            <label class="radio-inline"> <input type="radio" name="pch2" value="2"/> <span><img src="/pch_02.png" alt="2"/></span> </label>
+                            <label class="radio-inline"> <input type="radio" name="pch" value="2"/> <span><img src="/pch_02.png" alt="2"/></span> </label>
 
-                            <label class="radio-inline"> <input type="radio" name="pch2" value="3"/> <span><img src="/pch_03.png" alt="3"/></span> </label>
+                            <label class="radio-inline"> <input type="radio" name="pch" value="3"/> <span><img src="/pch_03.png" alt="3"/></span> </label>
 
-                            <label class="radio-inline"> <input type="radio" name="pch2" value="4"/> <span><img src="/pch_04.png" alt="4"/></span> </label>
+                            <label class="radio-inline"> <input type="radio" name="pch" value="4"/> <span><img src="/pch_04.png" alt="4"/></span> </label>
 
                             </div>
                             </div> ')),
                             br(),
                             h3(textOutput('selected'))
                             ),
-                radioButtons("pch", "Plot symbol code",
+                radioButtons("pchOLD", "Plot symbol code",
                     selected="1", inline=TRUE,
                     choiceValues=pchChoiceValues,
                     #choiceNames=lapply(pchChoiceValues, function(i) paste0("<img src=\"pch_",i,".png\">")))
@@ -264,8 +264,7 @@ server <- function(input, output)
 
     output$title <- renderUI({
         msg <- paste0("imageDigitizer ", version)
-        msg <- paste0(msg, "(", input$pch2, ")")
-        msg <- paste0(msg, "(", input$selected, ")")
+        msg <- paste0(msg, "(", input$pch, ")")
         if (!is.null(state$inputFile)) {
             msg <- paste0(msg, " | File '", state$inputFile$name, "'")
             if (state$stage < 10) {
@@ -432,13 +431,14 @@ server <- function(input, output)
 #' observeEvent outputOptions plotOutput radioButtons reactiveValues renderPlot renderText
 #' renderUI shinyApp showModal showNotification sliderInput stopApp textInput
 #' br h3 tags textOutput
-#'
-#' @export
-imageDigitizer <- function()
-{
-    shinyApp(ui=ui, server=server)
-}
+##'
+##' @export
+#imageDigitizer <- function()
+#{
+#    shinyApp(ui=ui, server=server)
+#}
 
 # Next works when called separately
 #runApp("R/imageDigitizer.R")
 
+shinyApp(ui=ui, server=server)
