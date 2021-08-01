@@ -4,7 +4,7 @@ library(png)
 
 debugFlagDefault <- FALSE              # For console messages that trace control flow.
 colPoints <- 2                         # FIXME: let user specify this
-cexPoints <- 1                         # FIXME: let user specify this
+cexPoints <- 1.4                       # FIXME: let user specify this
 
 options(shiny.error=browser)
 stageMeanings <- c("Input file",       # stage  1
@@ -43,6 +43,7 @@ ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onI
     uiOutput(outputId="enterXLimits"),
     uiOutput(outputId="enterYLimits"),
     uiOutput(outputId="undoSaveCodeQuit"),
+    uiOutput(outputId="choosePch"),
     uiOutput(outputId="showImage"))
 
 server <- function(input, output)
@@ -64,13 +65,14 @@ server <- function(input, output)
         yname="y",
         xdevice=NULL,
         ydevice=NULL,
-        code=NULL,
+        pch=NULL,
         xaxis=list(user=NULL, device=NULL, slope=NULL, user0=NULL, device0=NULL),
         yaxis=list(user=NULL, device=NULL, slope=NULL, user0=NULL, device0=NULL))
 
     saveFile <- function()
     {
-        file <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
+        file <- paste(path_home(), "/", gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
+        cat(file=stderr(), "saveFile() 1 file='", file, "'\n", sep='')
         cat(paste("# imageDigitizer: ", version,              "\n", sep=""), file=file)
         cat(paste("# file:           ", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
         cat(paste("# rotation:       ", state$rotate,         "\n", sep=""), file=file, append=TRUE)
@@ -80,15 +82,19 @@ server <- function(input, output)
         cat(paste("# yaxis$user0:    ", state$yaxis$user0,    "\n", sep=""), file=file, append=TRUE)
         cat(paste("# yaxis$device0:  ", state$yaxis$device0,  "\n", sep=""), file=file, append=TRUE)
         cat(paste("# yaxis$slope:    ", state$yaxis$slope,    "\n", sep=""), file=file, append=TRUE)
-        cat(sprintf("i,devicex,devicey,%s,%s,code\n", state$xname, state$yname), file=file, append=TRUE)
+        cat(sprintf("i,devicex,devicey,%s,%s,pch\n", state$xname, state$yname), file=file, append=TRUE)
+        cat(file=stderr(), "saveFile() 2\n")
         if (length(state$xaxis$device)) {
+            cat(file=stderr(), "saveFile() 3\n")
             x <- state$xaxis$user0 + state$xaxis$slope * (state$xdevice - state$xaxis$device0)
             y <- state$yaxis$user0 + state$yaxis$slope * (state$ydevice - state$yaxis$device0)
             for (i in seq_along(state$xdevice)) {
+                cat(file=stderr(), "saveFile() 4.", i, "\n", sep="")
                 cat(sprintf("%d,%.4f,%.4f,%.4g,%.4g,%d\n",
-                        i, state$xdevice[i], state$ydevice[i], x[i], y[i],state$code[i]), file=file, append=TRUE)
+                        i, state$xdevice[i], state$ydevice[i], x[i], y[i], state$pch[i]), file=file, append=TRUE)
             }
         }
+        cat(file=stderr(), "saveFile() 5 (done)\n")
         file
     }
 
@@ -176,38 +182,34 @@ server <- function(input, output)
         showNotification(paste0("Please click the mouse where y=", state$yaxis$user[1], ", and then where y=", state$yaxis$user[2]))
     })
 
-    # FIXME: move the pch choices to an item of its own (for clarity and in case we want to put it in a submenu)
+    # FIXME: add 'Help' here.
     output$undoSaveCodeQuit <- renderUI({
-        if (state$stage == 1L) { # 10L
+        if (state$stage == 10L) {
             dmsg("in output$undoSaveCodeQuit (state$stage=", state$stage, ")\n", sep="")
-            # See https://github.com/dankelley/imageDigitizer/issues/8 for the pch-selector method.
-            pchChoices <- paste(sapply(0:25, function(i)
-                    {
-                        if (i == 1L) {
-                            sprintf('<label class="radio-inline">
-                                <input type="radio" name="pch" value="%d" checked="checked"/>
-                                <span> <img src="/pch_%02d.png" alt="%d"/></span>
-                                </label>',i, i, i)
-                        } else {
-                            sprintf('<label class="radio-inline">
-                                <input type="radio" name="pch" value="%d"/>
-                                <span> <img src="/pch_%02d.png" alt="%d"/></span>
-                                </label>',i, i, i)
-                        }
-                    }),
-                collapse="\n")
             fluidRow(
                 actionButton("undoButton", "Undo"),
                 actionButton("saveButton", "Save"),
                 actionButton("codeButton", "Code"),
-                actionButton("quitButton", "Quit"),
+                actionButton("quitButton", "Quit"))
+        }
+    })
+
+    # Icon-based pch selector (defaulting to 6, a diamond).
+    # See https://github.com/dankelley/imageDigitizer/issues/8
+    output$choosePch <- renderUI({
+        if (state$stage == 10L) {
+            dmsg("in output$choosePch (state$stage=", state$stage, ")\n", sep="")
+            pchChoices <- paste(sapply(0:25, function(i)
+                    {
+                        sprintf('<label class="radio-inline">
+                            <input type="radio" name="pch" value="%d" %s/>
+                            <span> <img src="/pch_%02d.png" alt="%d"/> </span>
+                            </label>', i, if (i == 6L) 'checked="checked"' else '', i, i)
+                    }),
+                collapse="\n")
+            fluidRow(
                 column(width=12,
-                    tags$div(HTML(paste('<div id="pch" class="form-group shiny-input-radiogroup shiny-input-container shiny-input-container-inline"> <label class="control-label" for="pch">Plot symbol</label> <div class="shiny-options-group">', pchChoices, '</div> </div>')),
-                        br(),
-                        h3(textOutput('selected'))
-                        )
-                    )
-                )
+                    tags$div(HTML(paste('<div id="pch" class="form-group shiny-input-radiogroup shiny-input-container shiny-input-container-inline"> <label class="control-label" for="pch">Plot symbol</label> <div class="shiny-options-group">', pchChoices, '</div> </div>')))))
         }
     })
 
@@ -216,20 +218,20 @@ server <- function(input, output)
         if (length(state$xdevice) > 0) {
             state$xdevice <- head(state$xdevice, -1)
             state$ydevice <- head(state$ydevice, -1)
-            state$code <- head(state$code, -1)
+            state$pch <- head(state$pch, -1)
         }
     })
 
     observeEvent(input$saveButton, {
         name <- saveFile()
-        showNotification(paste0("File '", name, "' saved"), type="message", duration=1)
+        showNotification(paste0("File '", name, "' saved"), type="message", duration=5)
     })
 
     observeEvent(input$codeButton, {
         ofile <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
         msg <- "# Sample code to read and plot the saved data file<br>\n"
         msg <- paste0(msg, "data <- read.csv(file=\"", ofile, "\", skip=9, header=TRUE)<br>\n")
-        msg <- paste0(msg, "plot(", "data[[\"", state$xname, "\"]],", "data[[\"", state$yname, "\"]],", "xlab=\"", state$xname, "\",", "ylab=\"", state$yname, "\",", "pch=data$code)<br>\n")
+        msg <- paste0(msg, "plot(", "data[[\"", state$xname, "\"]],", "data[[\"", state$yname, "\"]],", "xlab=\"", state$xname, "\",", "ylab=\"", state$yname, "\",", "pch=data$pch)<br>\n")
         showModal(modalDialog(HTML(msg), title="R code", size="l"))
     })
 
@@ -261,7 +263,6 @@ server <- function(input, output)
 
     output$title <- renderUI({
         msg <- paste0("imageDigitizer ", version)
-        msg <- paste0(msg, "(", input$pch, ")")
         if (!is.null(state$inputFile)) {
             msg <- paste0(msg, " | File '", state$inputFile$name, "'")
             if (state$stage < 10) {
@@ -340,7 +341,7 @@ server <- function(input, output)
                 }
             }
             if (length(state$xdevice)) {
-                points(state$xdevice, state$ydevice, pch=state$code, col=colPoints, cex=cexPoints)
+                points(state$xdevice, state$ydevice, pch=state$pch, col=colPoints, cex=cexPoints)
             }
         }
     })
@@ -388,7 +389,7 @@ server <- function(input, output)
         } else if (state$stage == 10L) { # digitizing points
             state$xdevice <- c(state$xdevice, input$click$x)
             state$ydevice <- c(state$ydevice, input$click$y)
-            state$code <- c(state$code, as.integer(input$pch))
+            state$pch <- c(state$pch, as.integer(input$pch))
             n <- length(state$xdevice)
             dmsg("  defined ", n, "-th point as c(", state$xdevice[n], ",", state$ydevice[n], ") in device coordinates\n", sep="")
         }

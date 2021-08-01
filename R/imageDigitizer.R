@@ -15,6 +15,7 @@
 #' @export
 #' @importFrom shiny runApp
 #' @importFrom magick image_rotate image_shear
+#' @importFrom fs path_home
 imageDigitizer <- function()
 {
     dir <- system.file("shiny", "imageDigitizer/app.R", package="imageDigitizer")
