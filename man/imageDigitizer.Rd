@@ -7,15 +7,16 @@
 imageDigitizer()
 }
 \description{
-A shiny graphical user interface (GUI) for digitizing points in images, by
-means of mouse clicks. The GUI is meant to be reasonably self-explanatory.
+Sets up a "shiny" graphical user interface (GUI) for digitizing points in images, by
+means of mouse clicks. The interface is reasonably self-explanatory.
 }
 \section{Developer plans}{
 
 \enumerate{
-\item Allow single-scale (like for a map)
-\item Zooming
-\item Read analysis file (to carry on with a previous analysis)
+\item Handle single-scale cases by not requiring 2 clicks on each axis.
+\item Provide controls for zooming in and out.
+\item Provide a way to read files created by previous uses, to extend an
+analysis beyond a single session.
 }
 }
 

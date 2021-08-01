@@ -1,14 +1,15 @@
-n <- 20
-cex <- 2
-cat("choiceValues=1:20\n")
-cat("choiceNames=c(\n")
-for (i in seq_len(n)) {
-    png(sprintf("pch_%02d.png", i), width=16, height=16)
-    par(mar=c(0,0,0,0))
-    plot(c(-1,1), c(-1,1), xlab="", ylab="", type="n", axes=FALSE)
-    points(0.05, 0.05, pch=i, cex=cex)
+pchs <- 0:25
+cex <- 3
+lwd <- 2
+width <- 32
+height <- 32
+scale <- 1.0
+for (pch in pchs) {
+    png(sprintf("pch_%02d.png", pch), width=width, height=height)
+    par(mar=rep(0,4))
+    plot(scale*c(-1,1), scale*c(-1,1), xlab="", ylab="", type="n", axes=FALSE)
+    points(0, 0, pch=pch, cex=cex, lwd=lwd)
     dev.off()
-    cat(sprintf("\"<img src='pch_%02d.png' alt='%d'>\",\n", i, i))
+    cat(sprintf("\"<img src='/pch_%02d.png' alt='%d'>\",\n", pch, pch))
 }
-cat(")\n")
 
