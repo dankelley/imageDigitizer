@@ -176,38 +176,37 @@ server <- function(input, output)
         showNotification(paste0("Please click the mouse where y=", state$yaxis$user[1], ", and then where y=", state$yaxis$user[2]))
     })
 
+    # FIXME: move the pch choices to an item of its own (for clarity and in case we want to put it in a submenu)
     output$undoSaveCodeQuit <- renderUI({
         if (state$stage == 1L) { # 10L
             dmsg("in output$undoSaveCodeQuit (state$stage=", state$stage, ")\n", sep="")
-            pchChoiceValues <- as.character(1:20)
+            # See https://github.com/dankelley/imageDigitizer/issues/8 for the pch-selector method.
+            pchChoices <- paste(sapply(0:25, function(i)
+                    {
+                        if (i == 1L) {
+                            sprintf('<label class="radio-inline">
+                                <input type="radio" name="pch" value="%d" checked="checked"/>
+                                <span> <img src="/pch_%02d.png" alt="%d"/></span>
+                                </label>',i, i, i)
+                        } else {
+                            sprintf('<label class="radio-inline">
+                                <input type="radio" name="pch" value="%d"/>
+                                <span> <img src="/pch_%02d.png" alt="%d"/></span>
+                                </label>',i, i, i)
+                        }
+                    }),
+                collapse="\n")
             fluidRow(
                 actionButton("undoButton", "Undo"),
                 actionButton("saveButton", "Save"),
                 actionButton("codeButton", "Code"),
                 actionButton("quitButton", "Quit"),
                 column(width=12,
-                    tags$div(HTML('<div id="pch" class="form-group shiny-input-radiogroup shiny-input-container shiny-input-container-inline">
-                            <label class="control-label" for="pch">Plot symbol</label>
-                            <div class="shiny-options-group">
-
-                            <label class="radio-inline"> <input type="radio" name="pch" value="1"/> <span><img src="/pch_01.png" alt="1"/></span> </label>
-
-                            <label class="radio-inline"> <input type="radio" name="pch" value="2"/> <span><img src="/pch_02.png" alt="2"/></span> </label>
-
-                            <label class="radio-inline"> <input type="radio" name="pch" value="3"/> <span><img src="/pch_03.png" alt="3"/></span> </label>
-
-                            <label class="radio-inline"> <input type="radio" name="pch" value="4"/> <span><img src="/pch_04.png" alt="4"/></span> </label>
-
-                            </div>
-                            </div> ')),
-                            br(),
-                            h3(textOutput('selected'))
-                            ),
-                radioButtons("pchOLD", "Plot symbol code",
-                    selected="1", inline=TRUE,
-                    choiceValues=pchChoiceValues,
-                    #choiceNames=lapply(pchChoiceValues, function(i) paste0("<img src=\"pch_",i,".png\">")))
-                    choiceNames=lapply(pchChoiceValues, function(i) img("src=\"pch_",i,".png\"")))
+                    tags$div(HTML(paste('<div id="pch" class="form-group shiny-input-radiogroup shiny-input-container shiny-input-container-inline"> <label class="control-label" for="pch">Plot symbol</label> <div class="shiny-options-group">', pchChoices, '</div> </div>')),
+                        br(),
+                        h3(textOutput('selected'))
+                        )
+                    )
                 )
         }
     })
@@ -311,7 +310,7 @@ server <- function(input, output)
             #<shear>     I <- magick::image_shear(I, sprintf("0x%.0f", round(state$sheary)))
             #<shear> }
             if (state$rotate != 0) {
-                I <- magick::image_rotate(I, state$rotate)
+                I <- image_rotate(I, state$rotate)
             }
             rasterImage(I, 0, 0, 1, 1, interpolate=FALSE)
             if (input$grid == "fine") {
@@ -414,29 +413,5 @@ server <- function(input, output)
 
 }
 
-#' R/shiny app for digitizing points in images.
-#'
-#' A shiny graphical user interface (GUI) for digitizing points in images, by
-#' means of mouse clicks. The GUI is meant to be reasonably self-explanatory.
-#'
-#' @section Developer plans:
-#'
-#' 1. Allow single-scale (like for a map)
-#' 2. Zooming
-#' 3. Read analysis file (to carry on with a previous analysis)
-#'
-#' @importFrom shiny actionButton column fileInput fluidRow h5 HTML img insertUI modalDialog
-#' observeEvent outputOptions plotOutput radioButtons reactiveValues renderPlot renderText
-#' renderUI shinyApp showModal showNotification sliderInput stopApp textInput
-#' br h3 tags textOutput
-##'
-##' @export
-#imageDigitizer <- function()
-#{
-#    shinyApp(ui=ui, server=server)
-#}
-
-# Next works when called separately
-#runApp("R/imageDigitizer.R")
-
 shinyApp(ui=ui, server=server)
+
