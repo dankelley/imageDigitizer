@@ -72,7 +72,6 @@ server <- function(input, output)
     saveFile <- function()
     {
         file <- paste(path_home(), "/", gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
-        cat(file=stderr(), "saveFile() 1 file='", file, "'\n", sep='')
         cat(paste("# imageDigitizer: ", version,              "\n", sep=""), file=file)
         cat(paste("# file:           ", state$inputFile$name, "\n", sep=""), file=file, append=TRUE)
         cat(paste("# rotation:       ", state$rotate,         "\n", sep=""), file=file, append=TRUE)
@@ -83,18 +82,14 @@ server <- function(input, output)
         cat(paste("# yaxis$device0:  ", state$yaxis$device0,  "\n", sep=""), file=file, append=TRUE)
         cat(paste("# yaxis$slope:    ", state$yaxis$slope,    "\n", sep=""), file=file, append=TRUE)
         cat(sprintf("i,devicex,devicey,%s,%s,pch\n", state$xname, state$yname), file=file, append=TRUE)
-        cat(file=stderr(), "saveFile() 2\n")
         if (length(state$xaxis$device)) {
-            cat(file=stderr(), "saveFile() 3\n")
             x <- state$xaxis$user0 + state$xaxis$slope * (state$xdevice - state$xaxis$device0)
             y <- state$yaxis$user0 + state$yaxis$slope * (state$ydevice - state$yaxis$device0)
             for (i in seq_along(state$xdevice)) {
-                cat(file=stderr(), "saveFile() 4.", i, "\n", sep="")
                 cat(sprintf("%d,%.4f,%.4f,%.4g,%.4g,%d\n",
                         i, state$xdevice[i], state$ydevice[i], x[i], y[i], state$pch[i]), file=file, append=TRUE)
             }
         }
-        cat(file=stderr(), "saveFile() 5 (done)\n")
         file
     }
 
@@ -194,7 +189,7 @@ server <- function(input, output)
         }
     })
 
-    # Icon-based pch selector (defaulting to 6, a diamond).
+    # Icon-based pch selector (defaulting to 5, a diamond).
     # See https://github.com/dankelley/imageDigitizer/issues/8
     output$choosePch <- renderUI({
         if (state$stage == 10L) {
@@ -204,7 +199,7 @@ server <- function(input, output)
                         sprintf('<label class="radio-inline">
                             <input type="radio" name="pch" value="%d" %s/>
                             <span> <img src="/pch_%02d.png" alt="%d"/> </span>
-                            </label>', i, if (i == 6L) 'checked="checked"' else '', i, i)
+                            </label>', i, if (i == 5L) 'checked="checked"' else '', i, i)
                     }),
                 collapse="\n")
             fluidRow(
