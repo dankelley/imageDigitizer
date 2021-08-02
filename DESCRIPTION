@@ -15,7 +15,7 @@ Suggests: knitr, rmarkdown
 NeedsCompilation: no
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
-Imports: png
+Imports: colourpicker, png
 BuildVignettes: true
 VignetteBuilder: knitr
 
