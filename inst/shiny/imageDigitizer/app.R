@@ -3,7 +3,6 @@
 library(png)
 
 debugFlagDefault <- FALSE              # For console messages that trace control flow.
-cexPoints <- 1.4                       # FIXME: let user specify this
 
 options(shiny.error=browser)
 stageMeanings <- c("Input file",       # stage  1
@@ -42,8 +41,8 @@ ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onI
     uiOutput(outputId="enterXLimits"),
     uiOutput(outputId="enterYLimits"),
     uiOutput(outputId="undoSaveCodeQuit"),
+    uiOutput(outputId="chooseCexCol"),
     uiOutput(outputId="choosePch"),
-    uiOutput(outputId="chooseCol"),
     uiOutput(outputId="showImage"))
 
 server <- function(input, output)
@@ -65,8 +64,7 @@ server <- function(input, output)
         yname="y",
         xdevice=NULL,
         ydevice=NULL,
-        pch=NULL,
-        col=NULL,
+        cex=NULL, pch=NULL, col=NULL, # symbol characteristics
         xaxis=list(user=NULL, device=NULL, slope=NULL, user0=NULL, device0=NULL),
         yaxis=list(user=NULL, device=NULL, slope=NULL, user0=NULL, device0=NULL))
 
@@ -82,13 +80,13 @@ server <- function(input, output)
         cat(paste("# yaxis$user0:    ", state$yaxis$user0,    "\n", sep=""), file=file, append=TRUE)
         cat(paste("# yaxis$device0:  ", state$yaxis$device0,  "\n", sep=""), file=file, append=TRUE)
         cat(paste("# yaxis$slope:    ", state$yaxis$slope,    "\n", sep=""), file=file, append=TRUE)
-        cat(sprintf("i,devicex,devicey,%s,%s,pch,col\n", state$xname, state$yname), file=file, append=TRUE)
+        cat(sprintf("i,devicex,devicey,%s,%s,cex,pch,col\n", state$xname, state$yname), file=file, append=TRUE)
         if (length(state$xaxis$device)) {
             x <- state$xaxis$user0 + state$xaxis$slope * (state$xdevice - state$xaxis$device0)
             y <- state$yaxis$user0 + state$yaxis$slope * (state$ydevice - state$yaxis$device0)
             for (i in seq_along(state$xdevice)) {
-                cat(sprintf("%d,%.4f,%.4f,%.4g,%.4g,%d,\"%s\"\n",
-                        i, state$xdevice[i], state$ydevice[i], x[i], y[i], state$pch[i], state$col[i]),
+                cat(sprintf("%d,%.4f,%.4f,%.4g,%.4g,%.2g,%d,\"%s\"\n",
+                        i, state$xdevice[i], state$ydevice[i], x[i], y[i], state$cex[i], state$pch[i], state$col[i]),
                     file=file, append=TRUE)
             }
         }
@@ -211,18 +209,21 @@ server <- function(input, output)
     })
 
     #' @importFrom colourpicker colourInput
-    output$chooseCol <- renderUI({
+    output$chooseCexCol <- renderUI({
         if (state$stage == 10L)
-            fluidRow(colourpicker::colourInput("col", "Symbol Colour", "red", allowTransparent=TRUE))
+            fluidRow(
+                column(4, colourpicker::colourInput("col", "Symbol Colour", "red", allowTransparent=TRUE)),
+                column(4, selectInput("cex", "Symbol Size", c(0.5,1,1.5,2:5), selected=2)))
     })
 
     #' @importFrom utils head
     observeEvent(input$undoButton, {
         if (length(state$xdevice) > 0) {
+            state$cex <- head(state$cex, -1)
+            state$col <- head(state$col, -1)
+            state$pch <- head(state$pch, -1)
             state$xdevice <- head(state$xdevice, -1)
             state$ydevice <- head(state$ydevice, -1)
-            state$pch <- head(state$pch, -1)
-            state$col <- head(state$col, -1)
         }
     })
 
@@ -345,7 +346,7 @@ server <- function(input, output)
                 }
             }
             if (length(state$xdevice)) {
-                points(state$xdevice, state$ydevice, pch=state$pch, col=state$col, cex=cexPoints)
+                points(state$xdevice, state$ydevice, pch=state$pch, col=state$col, cex=state$cex)
             }
         }
     })
@@ -391,10 +392,11 @@ server <- function(input, output)
             state$stage <- 10L           # prepare for next: digitize points on graph
             showNotification("Click on points to digitize them", type="message", closeButton=TRUE)
         } else if (state$stage == 10L) { # digitizing points
+            state$cex <- c(state$cex, as.integer(input$cex))
+            state$col <- c(state$col, input$col)
+            state$pch <- c(state$pch, as.integer(input$pch))
             state$xdevice <- c(state$xdevice, input$click$x)
             state$ydevice <- c(state$ydevice, input$click$y)
-            state$pch <- c(state$pch, as.integer(input$pch))
-            state$col <- c(state$col, input$col)
             n <- length(state$xdevice)
             dmsg("  defined ", n, "-th point as c(", state$xdevice[n], ",", state$ydevice[n], ") in device coordinates\n", sep="")
         }
