@@ -2,19 +2,19 @@
 
 library(png)
 
-debugFlagDefault <- FALSE              # For console messages that trace control flow.
+debugFlagDefault <- !FALSE              # For console messages that trace control flow.
 
 options(shiny.error=browser)
-stageMeanings <- c("Input file",       # stage  1
-    "Rotate image",                    # stage  2
-    "Enter axis names",                # stage  3
-    "Enter x limits",                  # stage  4
-    "Click lower x limit",             # stage  5 (recognized during click processing)
-    "Click upper x limit",             # stage  6 (recognized during click processing)
-    "Enter y limits",                  # stage  7
-    "Click lower y limit",             # stage  8 (recognized during click processing)
-    "Click upper y limit",             # stage  9 (recognized during click processing)
-    "Digitize Points")                 # stage 10
+stepMeanings <- c("Input file",        # step  1
+    "Rotate image",                    # step  2
+    "Enter axis names",                # step  3
+    "Enter x limits",                  # step  4
+    "Click lower x limit",             # step  5 (recognized during click processing)
+    "Click upper x limit",             # step  6 (recognized during click processing)
+    "Enter y limits",                  # step  7
+    "Click lower y limit",             # step  8 (recognized during click processing)
+    "Click upper y limit",             # step  9 (recognized during click processing)
+    "Digitize Points")                 # step 10
 
 col <- list(axes="magenta", grid="blue")
 
@@ -48,13 +48,13 @@ ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onI
 server <- function(input, output)
 {
     debugFlag <- debugFlagDefault
-    dmsg <- function(...)
+    dmsg <- function(..., sep="")
     {
         if (debugFlag)
-            cat(file=stderr(), ...)
+            cat(file=stderr(), ..., sep=sep)
     }
     state <- reactiveValues(
-        stage=1,
+        step=1,
         #<shear> shearx=0,
         #<shear> sheary=0,
         rotate=0,
@@ -62,11 +62,11 @@ server <- function(input, output)
         image=NULL,
         xname="x",
         yname="y",
-        xdevice=NULL,
-        ydevice=NULL,
+        x=NULL, xdevice=NULL,
+        y=NULL, ydevice=NULL,
         cex=NULL, pch=NULL, col=NULL, # symbol characteristics
-        xaxis=list(user=NULL, device=NULL, slope=NULL, user0=NULL, device0=NULL),
-        yaxis=list(user=NULL, device=NULL, slope=NULL, user0=NULL, device0=NULL))
+        xaxis=list(user=rep(NA,2), device=rep(NA,2), slope=NULL, user0=NULL, device0=NULL),
+        yaxis=list(user=rep(NA,2), device=rep(NA,2), slope=NULL, user0=NULL, device0=NULL))
 
     saveFile <- function()
     {
@@ -82,11 +82,11 @@ server <- function(input, output)
         cat(paste("# yaxis$slope:    ", state$yaxis$slope,    "\n", sep=""), file=file, append=TRUE)
         cat(sprintf("i,devicex,devicey,%s,%s,cex,pch,col\n", state$xname, state$yname), file=file, append=TRUE)
         if (length(state$xaxis$device)) {
-            x <- state$xaxis$user0 + state$xaxis$slope * (state$xdevice - state$xaxis$device0)
-            y <- state$yaxis$user0 + state$yaxis$slope * (state$ydevice - state$yaxis$device0)
+            #<old> x <- state$xaxis$user0 + state$xaxis$slope * (state$xdevice - state$xaxis$device0)
+            #<old> y <- state$yaxis$user0 + state$yaxis$slope * (state$ydevice - state$yaxis$device0)
             for (i in seq_along(state$xdevice)) {
                 cat(sprintf("%d,%.4f,%.4f,%.4g,%.4g,%.2g,%d,\"%s\"\n",
-                        i, state$xdevice[i], state$ydevice[i], x[i], y[i], state$cex[i], state$pch[i], state$col[i]),
+                        i, state$xdevice[i], state$ydevice[i], state$x[i], state$y[i], state$cex[i], state$pch[i], state$col[i]),
                     file=file, append=TRUE)
             }
         }
@@ -94,24 +94,24 @@ server <- function(input, output)
     }
 
     output$loadFile <- renderUI({
-        if (state$stage == 1L)
+        if (state$step == 1L)
             insertUI("loadAFile", ui=fileInput("inputFile", h5("Input file"), accept=c("image/png")))
     })
 
     output$showImage <- renderUI({
-        if (state$stage > 1L)
+        if (state$step > 1L)
             fluidRow(plotOutput("plot", click="click", hover="plotHover", height=600))
     })
 
     output$grid <- renderUI({
-        if (state$stage == 2L)
+        if (state$step == 2L)
             fluidRow(radioButtons("grid", label=h5("Grid"),
                     choices=c("None"="off", "Fine"="fine", "Medium"="medium", "Coarse"="coarse"),
                     selected="medium", inline=TRUE))
     })
 
     output$rotateImage <- renderUI({
-        if (state$stage == 2L) {
+        if (state$step == 2L) {
             fluidRow(
                 column(10, sliderInput("rotate", h5("Rotate Image [degrees]"), min=-20, max=20, value=0, step=0.05)),
                 column(2, fluidRow(actionButton("finishedRotation", "Done"))))
@@ -119,13 +119,13 @@ server <- function(input, output)
     })
 
     observeEvent(input$finishedRotation, {
-        state$stage <- 3L            # prepare for next
-        dmsg("clicked finishedRotation button, so setting state$stage to ", state$stage, ". Note: state$rotate=", state$rotate, " deg\n", sep="")
+        state$step <- 3L            # prepare for next
+        dmsg("clicked finishedRotation button, so setting state$step to ", state$step, ". Note: state$rotate=", state$rotate, " deg\n", sep="")
     })
 
     output$enterAxisNames<- renderUI({
-        if (state$stage == 3L) {
-            dmsg("in output$enterAxisNames (state$stage=", state$stage, ")\n", sep="")
+        if (state$step == 3L) {
+            dmsg("in output$enterAxisNames (state$step=", state$step, ")\n", sep="")
             fluidRow(
                 column(4, textInput("xname", h5("Name x axis"), state$xname)),
                 column(4, textInput("yname", h5("Name y axis"), state$yname)),
@@ -133,19 +133,19 @@ server <- function(input, output)
         }
     })
 
-    observeEvent(input$finishedGetAxisNames, { # at stage 4 (invisible to user)
+    observeEvent(input$finishedGetAxisNames, { # at step 4 (invisible to user)
         # refuse to accept zero-length names, retaining defaults ('x' and 'y') if so
         if (nchar(input$xname))
             state$xname <- input$xname
         if (nchar(input$yname))
             state$yname <- input$yname
-        dmsg("clicked finishedGetAxisNames button  (state$xname=\"", state$xname, "\" and state$yname=\"", state$yname, "\"; set state$stage=", state$stage, ")\n", sep="")
-        state$stage <- 4L            # prepare for next
+        dmsg("clicked finishedGetAxisNames button  (state$xname=\"", state$xname, "\" and state$yname=\"", state$yname, "\"; set state$step=", state$step, ")\n", sep="")
+        state$step <- 4L            # prepare for next
     })
 
     output$enterXLimits <- renderUI({
-        if (state$stage == 4L) {
-            dmsg("in output$enterXLimits (state$stage=", state$stage, ")\n", sep="")
+        if (state$step == 4L) {
+            dmsg("in output$enterXLimits (state$step=", state$step, ")\n", sep="")
             fluidRow(
                 column(4, textInput("xlow", h5(paste(state$xname, "low")))),
                 column(4, textInput("xhigh", h5(paste(state$xname, "high")))),
@@ -153,16 +153,22 @@ server <- function(input, output)
         }
     })
 
-    observeEvent(input$finishedGetXLimits, { # at stage 5 (which is noticed by output$click, which also catches stage 6)
+    observeEvent(input$finishedGetXLimits, { # at step 5 (which is noticed by output$click, which also catches step 6)
+        dmsg("clicked finishedGetXLimits button (state$step=", state$step, ")\n", sep="")
+        owarning <- options("warning")$warning
+        options(warning=0) # turn off warning for NAs (one of which is permitted)
         state$xaxis$user <- as.numeric(c(input$xlow, input$xhigh))
-        dmsg("clicked finishedGetXLimits button  (state$stage=", state$stage, ")\n", sep="")
-        state$stage <- 5L
-        showNotification(paste0("Please click the mouse where x=", state$xaxis$user[1], ", and then where x=", state$xaxis$user[2]))
+        options(warning=owarning)
+        if (sum(is.finite(state$xaxis$user)) < 1L)
+            stop("Must give at least 1 non-NA value for x")
+        state$step <- if (is.finite(state$xaxis$user[1])) 5L else 6L
+        showNotification(paste0("Click the mouse at x =",
+                paste(state$xaxis$user[is.finite(state$xaxis$user)], collapse=" and "), "\n"))
     })
 
     output$enterYLimits <- renderUI({
-        if (state$stage == 7L) {
-            dmsg("in output$enterYLimits (state$stage=", state$stage, ")\n", sep="")
+        if (state$step == 7L) {
+            dmsg("in output$enterYLimits (state$step=", state$step, ")\n", sep="")
             fluidRow(
                 column(4, textInput("ylow", h5(paste(state$yname, "low")))),
                 column(4, textInput("yhigh", h5(paste(state$yname, "high")))),
@@ -170,17 +176,23 @@ server <- function(input, output)
         }
     })
 
-    observeEvent(input$finishedGetYLimits, { # sets state$stage to 8 (which is noticed by output$click, which also forms stage 9)
+    observeEvent(input$finishedGetYLimits, { # sets state$step to 8 (which is noticed by output$click, which also forms step 9)
+        dmsg("clicked finishedGetYLimits button (state$step=", state$step, ")\n", sep="")
+        owarning <- options("warning")$warning
+        options(warning=0) # turn off warning for NAs (one of which is permitted)
         state$yaxis$user <- as.numeric(c(input$ylow, input$yhigh))
-        dmsg("clicked finishedGetYLimits button  (state$stage=", state$stage, ")\n", sep="")
-        state$stage <- 8L
-        showNotification(paste0("Please click the mouse where y=", state$yaxis$user[1], ", and then where y=", state$yaxis$user[2]))
+        options(warning=owarning)
+        if (sum(is.finite(state$yaxis$user)) < 1L)
+            stop("Must give at least 1 non-NA value for y")
+        state$step <- if (is.finite(state$yaxis$user[1])) 8L else 9L
+        showNotification(paste0("Click the mouse at y =",
+                paste(state$yaxis$user[is.finite(state$yaxis$user)], collapse=" and "), "\n"))
     })
 
     # FIXME: add 'Help' here.
     output$undoSaveCodeQuit <- renderUI({
-        if (state$stage == 10L) {
-            dmsg("in output$undoSaveCodeQuit (state$stage=", state$stage, ")\n", sep="")
+        if (state$step == 10L) {
+            dmsg("in output$undoSaveCodeQuit (state$step=", state$step, ")\n", sep="")
             fluidRow(
                 actionButton("undoButton", "Undo"),
                 actionButton("saveButton", "Save"),
@@ -192,8 +204,8 @@ server <- function(input, output)
     # Icon-based pch selector (defaulting to 5, a diamond).
     # See https://github.com/dankelley/imageDigitizer/issues/8
     output$choosePch <- renderUI({
-        if (state$stage == 10L) {
-            dmsg("in output$choosePch (state$stage=", state$stage, ")\n", sep="")
+        if (state$step == 10L) {
+            dmsg("in output$choosePch (state$step=", state$step, ")\n", sep="")
             pchChoices <- paste(sapply(0:25, function(i)
                     {
                         sprintf('<label class="radio-inline">
@@ -204,16 +216,16 @@ server <- function(input, output)
                 collapse="\n")
             fluidRow(
                 column(width=12,
-                    tags$div(HTML(paste('<div id="pch" class="form-group shiny-input-radiogroup shiny-input-container shiny-input-container-inline"> <label class="control-label" for="pch">Plot symbol</label> <div class="shiny-options-group">', pchChoices, '</div> </div>')))))
+                    tags$div(HTML(paste('<div id="pch" class="form-group shiny-input-radiogroup shiny-input-container shiny-input-container-inline"> <label class="control-label" for="pch">Symbol Type</label> <div class="shiny-options-group">', pchChoices, '</div> </div>')))))
         }
     })
 
     #' @importFrom colourpicker colourInput
     output$chooseCexCol <- renderUI({
-        if (state$stage == 10L)
+        if (state$step == 10L)
             fluidRow(
-                column(4, colourpicker::colourInput("col", "Symbol Colour", "red", allowTransparent=TRUE)),
-                column(4, selectInput("cex", "Symbol Size", c(0.5,1,1.5,2:5), selected=2)))
+                column(4, colourpicker::colourInput("col", "Symbol Colour", "#B632C7", allowTransparent=TRUE)),
+                column(4, selectInput("cex", "Symbol Size", seq(0.5, 4, 0.5), selected=2)))
     })
 
     #' @importFrom utils head
@@ -222,6 +234,8 @@ server <- function(input, output)
             state$cex <- head(state$cex, -1)
             state$col <- head(state$col, -1)
             state$pch <- head(state$pch, -1)
+            state$x <- head(state$x, -1)
+            state$y <- head(state$y, -1)
             state$xdevice <- head(state$xdevice, -1)
             state$ydevice <- head(state$ydevice, -1)
         }
@@ -236,7 +250,7 @@ server <- function(input, output)
         ofile <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
         msg <- "# Sample code to read and plot the saved data file<br>\n"
         msg <- paste0(msg, "data <- read.csv(file=\"~/", ofile, "\", skip=9, header=TRUE)<br>\n")
-        msg <- paste0(msg, "plot(", "data[[\"", state$xname, "\"]],", "data[[\"", state$yname, "\"]],", "xlab=\"", state$xname, "\",", "ylab=\"", state$yname, "\",", "pch=data$pch, col=data$col)<br>\n")
+        msg <- paste0(msg, "plot(", "data[[\"", state$xname, "\"]],", "data[[\"", state$yname, "\"]],", "xlab=\"", state$xname, "\",", "ylab=\"", state$yname, "\",", ", cex=data$cex, pch=data$pch, col=data$col)<br>\n")
         showModal(modalDialog(HTML(msg), title="R code", size="l"))
     })
 
@@ -249,17 +263,18 @@ server <- function(input, output)
         key <- intToUtf8(input$keypress)
         if (key == 'd') {
             debugFlag <<- !debugFlag
-        } else if (state$stage > 9L) {
-            #dmsg("keypress numerical value ", input$keypress, ", i.e. key='", key, "'\n", sep="")
+        } else if (state$step > 3L) {
             if (key == 'd') {
                 debugFlag <- !debugFlag
                 cat(file=stderr(), "now, debugFlag=", debugFlag, "\n")
-            } else if (key == '+') {
-                dmsg("should zoom in now\n")
+            }
+        } else if (state$step == 10L) { # Don't allow zooming until scales are defined.  FIXME: relax this?
+            if (key == '+') {
+                dmsg("FIXME: should zoom in now\n")
             } else if (key == '-') {
-                dmsg("should zoom out now\n")
+                dmsg("FIXME: should zoom out now\n")
             } else if (key == '0') {
-                dmsg("should unzoom now\n")
+                dmsg("FIXME: should unzoom now\n")
             } else if (key == '?') {
                 showModal(modalDialog(title="", HTML(keypressHelp), easyClose=TRUE))
             }
@@ -270,8 +285,8 @@ server <- function(input, output)
         msg <- paste0("imageDigitizer ", version)
         if (!is.null(state$inputFile)) {
             msg <- paste0(msg, " | File '", state$inputFile$name, "'")
-            if (state$stage < 10) {
-                msg <- paste0(msg, " | Step ", state$stage, " (", stageMeanings[state$stage], ")")
+            if (state$step < 10) {
+                msg <- paste0(msg, " | Step ", state$step, " (", stepMeanings[state$step], ")")
             } else {
                 npts <- length(state$xdevice)
                 msg <- paste0(msg, " | Digitized ", npts, if (npts!=1L) " points" else " point")
@@ -289,7 +304,7 @@ server <- function(input, output)
     })
 
     output$loadFile <- renderUI({
-        if (state$stage == 1) {
+        if (state$step == 1) {
             fileInput("inputFile", h5("Input file"), accept=c("image/png"))
         }
     })
@@ -329,23 +344,21 @@ server <- function(input, output)
                 abline(h=seq(-3, 3, 0.2), col=col$grid, lty="dotted")
                 abline(v=seq(-3, 3, 0.2 * asp), col=col$grid, lty="dotted")
             }
-            if (length(state$xaxis$device) != 0) {
-                abline(v=state$xaxis$device[1], col=col$axes)
-                mtext(state$xaxis$user[1], side=3, at=state$xaxis$device[1], col=col$axes)
-                if (length(state$xaxis$device) == 2) {
-                    abline(v=state$xaxis$device[2], col=col$axes)
-                    mtext(state$xaxis$user[2], side=3, at=state$xaxis$device[2], col=col$axes)
+            for (i in seq_along(state$xaxis$user)) {
+                if (is.finite(state$xaxis$user[i]) && is.finite(state$xaxis$device[i])) {
+                    abline(v=state$xaxis$device[i], col=col$axes)
+                    mtext(state$xaxis$user[i], side=1, at=state$xaxis$device[i], col=col$axes)
                 }
             }
-            if (length(state$yaxis$device) != 0) {
-                abline(h=state$yaxis$device[1], col=col$axes)
-                mtext(state$yaxis$user[1], side=4, at=state$yaxis$device[1], col=col$axes)
-                if (length(state$yaxis$device) == 2) {
-                    abline(h=state$yaxis$device[2], col=col$axes)
-                    mtext(state$yaxis$user[2], side=4, at=state$yaxis$device[2], col=col$axes)
+            for (i in seq_along(state$yaxis$user)) {
+                if (is.finite(state$yaxis$user[i]) && is.finite(state$yaxis$device[i])) {
+                    abline(h=state$yaxis$device[i], col=col$axes)
+                    mtext(state$yaxis$user[i], side=2, at=state$yaxis$device[i], col=col$axes)
                 }
             }
             if (length(state$xdevice)) {
+                #dmsg("plotting points??? next are the points\n")
+                #print(file=stderr(), data.frame(xdevice=state$xdevice,ydevice=state$ydevice))
                 points(state$xdevice, state$ydevice, pch=state$pch, col=state$col, cex=state$cex)
             }
         }
@@ -356,63 +369,100 @@ server <- function(input, output)
     })
 
     observeEvent(input$click, {
-        dmsg("click with state$stage =", state$stage, "\n")
-        if (state$stage == 5L) {
+        dmsg("click with state$step=", state$step, " (", stepMeanings[state$step], ")\n")
+        if (state$step == 5L) {
             state$xaxis$device[1] <- input$click$x
-            state$stage <- 6L            # prepare for next
-            dmsg("defined state$xaxis$device[1] as ", state$xaxis$device[1], "\n")
-        } else if (state$stage == 6L) {
-            state$xaxis$device[2] <- input$click$x
-            state$stage <- 7L            # prepare for next
-            dmsg("defined state$xaxis$device[2] as ", state$xaxis$device[2], "\n")
-        } else if (state$stage == 8L) {
+            state$step <- if (is.finite(state$xaxis$user[2])) 6L else 7L # prepare for next click (possibly jumping)
+            dmsg("step 5: set state$xaxis$device = c(", paste(state$xaxis$device,collapse=", "), ")\n")
+            dmsg("step 5: set state$step =", state$step, "\n")
+        } else if (state$step == 6L) {
+            if (is.finite(state$xaxis$user[2]))
+                state$xaxis$device[2] <- input$click$x
+            dmsg("step 6: set state$xaxis$device = c(", paste(state$xaxis$device,collapse=","), ")\n")
+            state$step <- 7L            # prepare for next
+        } else if (state$step == 8L) {
             state$yaxis$device[1] <- input$click$y
-            state$stage <- 9L            # prepare for next
-            dmsg("defined state$yaxis$device[1] as ", state$yaxis$device[1], "\n")
-        } else if (state$stage == 9L) {
-            state$yaxis$device[2] <- input$click$y
-            dmsg("defined state$yaxis$device[2] as ", state$yaxis$device[2], "\n")
-            # Save 3 items (built up from 2) to make it easier to code equal-scale cases
-            # We will later use e.g.
-            # x <- with(state$xaxis, user0+slope*(input$mouse$x-device0))
-            if (all(is.finite(state$xaxis$user))) {
-                state$xaxis$user0 <- with(state$xaxis, user[1])
-                state$xaxis$device0 <- with(state$xaxis, device[1])
-                state$xaxis$slope <- with(state$xaxis, (user[2]-user[1])/(device[2]-device[1]))
-            } else {
-                stop("cannot handle single-point x models yet")
+            state$step <- if (is.finite(state$yaxis$user[2])) 9L else 10L # prepare for next click (possibly jumping)
+            dmsg("step 8: set state$yaxis$device = c(", paste(state$yaxis$device,collapse=","), ")\n")
+            dmsg("step 8: set state$step =", state$step, "\n")
+        } else if (state$step == 9L) {
+            if (is.finite(state$yaxis$user[2]))
+                state$yaxis$device[2] <- input$click$y
+            state$step <- 10L          # prepare for next
+        } else if (state$step == 10L) {
+            # We need to set up scales, but only once.
+            if (is.null(state$xaxis$slope)) {
+                dmsg("step 10 setup -- define state$xaxis and state$yaxis\n")
+                # Save 3 items (built up from 2) to make it easier to code equal-scale cases
+                # We will later use e.g.
+                # x <- with(state$xaxis, user0+slope*(input$mouse$x-device0))
+                xn <- sum(is.finite(state$xaxis$user))
+                yn <- sum(is.finite(state$yaxis$user))
+                if (xn < 1L)
+                    stop("must give 1 or 2 two reference points for x axis")
+                if (yn < 1L)
+                    stop("must give 1 or 2 two reference points for y axis")
+                if ((xn + yn) < 3L)
+                    stop("must give 2 reference points for either x or y axis (or both)")
+                if (xn == 2) {
+                    # Determine xaxis$slope from the 2 provided x values.
+                    state$xaxis$user0 <- with(state$xaxis, user[1])
+                    state$xaxis$device0 <- with(state$xaxis, device[1])
+                    state$xaxis$slope <- with(state$xaxis, (user[2]-user[1])/(device[2]-device[1]))
+                    if (yn == 2) {
+                        dmsg("step 10(setup): xn=2, yn=2\n")
+                        # Determine yaxis$slope from the 2 provided y values.
+                        state$yaxis$user0 <- with(state$yaxis, user[1])
+                        state$yaxis$device0 <- with(state$yaxis, device[1])
+                        state$yaxis$slope <- with(state$yaxis, (user[2]-user[1])/(device[2]-device[1]))
+                    } else {
+                        dmsg("step 10(setup): xn=2, yn=1\n")
+                        # Use whichever y value was provided, as the base, and then copy the x slope
+                        state$yaxis$user0 <- with(state$yaxis, user[is.finite(user)])
+                        state$yaxis$device0 <- with(state$yaxis, device[is.finite(user)])
+                        state$yaxis$slope <- state$xaxis$slope
+                    }
+                } else {
+                    dmsg("step 10(setup): xn=1, yn=2\n")
+                    # From the above, we know that there are 2 y values.
+                    state$yaxis$user0 <- with(state$yaxis, user[1])
+                    state$yaxis$device0 <- with(state$yaxis, device[1])
+                    state$yaxis$slope <- with(state$yaxis, (user[2]-user[1])/(device[2]-device[1]))
+                    # Use whichever x value was provided, as the base, and then copy the y slope
+                    state$xaxis$user0 <- with(state$xaxis, user[is.finite(user)])
+                    state$xaxis$device0 <- with(state$xaxis, device[is.finite(user)])
+                    state$xaxis$slope <- state$yaxis$slope
+                }
+                with(state$xaxis, dmsg("step 10(setup): set state$xaxis$user0=", user0, ", device0=", device0,", slope=", slope, "\n"))
+                with(state$yaxis, dmsg("step 10(setup): set state$yaxis$user0=", user0, ", device0=", device0,", slope=", slope, "\n"))
+                showNotification("Click on points to digitize them", type="message", duration=3)
             }
-            if (all(is.finite(state$yaxis$user))) {
-                state$yaxis$user0 <- with(state$yaxis, user[1])
-                state$yaxis$device0 <- with(state$yaxis, device[1])
-                state$yaxis$slope <- with(state$yaxis, (user[2]-user[1])/(device[2]-device[1]))
-            } else {
-                stop("cannot handle single-point y models yet")
-            }
-            state$stage <- 10L           # prepare for next: digitize points on graph
-            showNotification("Click on points to digitize them", type="message", closeButton=TRUE)
-        } else if (state$stage == 10L) { # digitizing points
-            state$cex <- c(state$cex, as.integer(input$cex))
-            state$col <- c(state$col, input$col)
-            state$pch <- c(state$pch, as.integer(input$pch))
-            state$xdevice <- c(state$xdevice, input$click$x)
-            state$ydevice <- c(state$ydevice, input$click$y)
-            n <- length(state$xdevice)
-            dmsg("  defined ", n, "-th point as c(", state$xdevice[n], ",", state$ydevice[n], ") in device coordinates\n", sep="")
+            n <- 1L + length(state$x)
+            state$cex[n] <- as.integer(input$cex)
+            state$col[n] <- input$col
+            state$pch[n] <- as.integer(input$pch)
+            state$xdevice[n] <- input$click$x
+            state$ydevice[n] <- input$click$y
+            state$x[n] <- state$xaxis$user0 + state$xaxis$slope * (state$xdevice[n] - state$xaxis$device0)
+            state$y[n] <- state$yaxis$user0 + state$yaxis$slope * (state$ydevice[n] - state$yaxis$device0)
+            dmsg("step 10: defined ", n, "-th point as c(", state$x[n], ",", state$y[n], ")\n")
         }
     })
 
     ## Image transformations chosen by user to establish orthogonal x and y axes
-    observeEvent(input$rotate, { state$rotate <- input$rotate })
-    #<idea> observeEvent(input$shearx, { state$shearx <- input$shearx })
-    #<idea> observeEvent(input$sheary, { state$sheary <- input$sheary })
+    observeEvent(input$rotate, {
+        state$rotate <- input$rotate
+    })
+
+    #<shear> observeEvent(input$shearx, { state$shearx <- input$shearx })
+    #<shear> observeEvent(input$sheary, { state$sheary <- input$sheary })
 
     ## @importFrom png readPNG
     #' @importFrom magick image_read
     observeEvent(input$inputFile, {
         state$inputFile <- input$inputFile
         state$image <- magick::image_read(state$inputFile$datapath)
-        state$stage <- 2               # prepare for next
+        state$step <- 2               # prepare for next
     })
 
     output$readImage <- renderUI({
