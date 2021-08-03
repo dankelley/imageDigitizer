@@ -13,3 +13,4 @@ developer
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^\.github$
