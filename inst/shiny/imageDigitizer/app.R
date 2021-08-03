@@ -108,11 +108,13 @@ server <- function(input, output)
             msg <- paste0("Digitized ", npts, if (npts!=1L) " points" else " point")
             if (!is.null(input$plotHover$x)) {
                 msg <- paste0(msg,
-                    sprintf(" | Hovering at %s=%.3g, %s=%.3g",
+                    sprintf(" | Hovering at %s=%.3g (%.0f px), %s=%.3g (%.0f px)",
                         state$xname,
                         with(state$xaxis, user0+slope*(input$plotHover$x-device0)),
+                        input$plotHover$x,
                         state$yname,
-                        with(state$yaxis, user0+slope*(input$plotHover$y-device0))))
+                        with(state$yaxis, user0+slope*(input$plotHover$y-device0)),
+                        input$plotHover$y))
             }
         }
         msg
@@ -330,13 +332,11 @@ server <- function(input, output)
     output$plot <- renderPlot({
         par(mar=rep(1, 4))
         idim <- dim(state$image[[1]])
-        asp <- if (is.null(state$image)) 1 else idim[3] / idim[2] # FIXME: or reciprocal?
-        #dmsg("image dimension=", idim[2], "x", idim[3], "; plot aspect ratio=", asp, "\n", sep="")
-        plot(0:1, 0:1, type='n', asp=asp, xaxs="i", yaxs="i", axes=FALSE)
+        #asp <- if (is.null(state$image)) 1 else idim[3] / idim[2] # FIXME: or reciprocal?
+        dmsg("image dim[2]=", idim[2], ", idim[3]=", idim[3], "\n")
+        plot(c(1,idim[2]), c(1,idim[3]), type='n', asp=1, xaxs="i", yaxs="i", axes=FALSE)
         box()
-        if (is.null(state$image)) {
-            text(0.2, 0.5, "Please select a png file.")
-        } else {
+        if (!is.null(state$image)) {
             I <- state$image
             #<shear> if (state$shearx > 0) {
             #<shear>     dmsg("Performing shearx\n")
@@ -349,16 +349,20 @@ server <- function(input, output)
             if (state$rotate != 0) {
                 I <- image_rotate(I, state$rotate)
             }
-            rasterImage(I, 0, 0, 1, 1, interpolate=FALSE)
+            rasterImage(I, 1, 1, idim[2], idim[3], interpolate=FALSE)
+            # We fiddle with the range in the abline() calls because otherwise
+            # the edges might not show, depending on the aspect ratio of the diagram.
+            # This is a consequence of how plot(asp) works.
+            dg <- as.integer(1L + min(idim[2:3])/25)
             if (input$grid == "fine") {
-                abline(h=seq(-3, 3, 0.05), col=col$grid, lty="dotted")
-                abline(v=seq(-3, 3, 0.05 * asp), col=col$grid, lty="dotted")
+                abline(h=seq(-5*dg, idim[3]+5*dg, dg), col=col$grid, lty="dotted")
+                abline(v=seq(-5*dg, idim[2]+5*dg, dg), col=col$grid, lty="dotted")
             } else if (input$grid == "medium") {
-                abline(h=seq(-3, 3, 0.1), col=col$grid, lty="dotted")
-                abline(v=seq(-3, 3, 0.1 * asp), col=col$grid, lty="dotted")
+                abline(h=seq(-5*dg, idim[3]+5*dg, 2*dg), col=col$grid, lty="dotted")
+                abline(v=seq(-5*dg, idim[2]+5*dg, 2*dg), col=col$grid, lty="dotted")
             } else if (input$grid == "coarse") {
-                abline(h=seq(-3, 3, 0.2), col=col$grid, lty="dotted")
-                abline(v=seq(-3, 3, 0.2 * asp), col=col$grid, lty="dotted")
+                abline(h=seq(-5*dg, idim[3]+5*dg, 3*dg), col=col$grid, lty="dotted")
+                abline(v=seq(-5*dg, idim[2]+5*dg, 3*dg), col=col$grid, lty="dotted")
             }
             for (i in seq_along(state$xaxis$user)) {
                 if (is.finite(state$xaxis$user[i]) && is.finite(state$xaxis$device[i])) {
