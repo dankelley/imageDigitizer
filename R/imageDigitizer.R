@@ -3,14 +3,7 @@
 #' R/shiny app for digitizing points in images.
 #'
 #' Sets up a "shiny" graphical user interface (GUI) for digitizing points in images, by
-#' means of mouse clicks. The interface is reasonably self-explanatory.
-#'
-#' @section Developer plans:
-#'
-#' 1. Handle single-scale cases by not requiring 2 clicks on each axis.
-#' 2. Provide controls for zooming in and out.
-#' 3. Provide a way to read files created by previous uses, to extend an
-#' analysis beyond a single session.
+#' means of mouse clicks. The interface is intended to be reasonably self-explanatory.
 #'
 #' @export
 #' @importFrom shiny runApp
