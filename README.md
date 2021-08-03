@@ -3,7 +3,7 @@ image.
 
 # Installation
 
-The package may be installed by typing
+Since imageDigitizer is not on CRAN, it is installed by typing
 
     remotes::install_github("dankelley/imageDigitizer")
 
