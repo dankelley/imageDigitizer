@@ -10,3 +10,6 @@ testr.png
 imageDigitizer.Rproj
 .Rbuildignore
 developer
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
