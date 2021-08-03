@@ -51,7 +51,7 @@ can be helpful in digitizing graphs that have points on them.  It is also worth
 nothing that open symbols can be a good choice, since they make it easier to
 check that the point was clicked appropriately.
 
-![A sample screenshot showing the use of imageDigitizer on an image of a Right Whale.](screenshotle.png)
+![A sample screenshot showing the use of imageDigitizer on an image of a Right Whale.](screenshot_whale.png)
 
 **References**
 
