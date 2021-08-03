@@ -29,29 +29,35 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 A sample screenshot is shown below. The purpose is to trace the outline of a
 schematic side-view of a Right Whale (*Eubalaena glacialis*), taken from Daoust
-*et al.* (2018).
+*et al.* (2018).  Since this diagram is drawn natural scale, just a single
+value was used to specify the $y$ coordinate).  At this stage, 14 points have
+been digitized, and the mouse is hovering over $x=0.238$ and $y=0.413$.
 
-There is no axis in this case, so at the stage of viewing, a scale had been set
-by clicking on four points on the background grid. A coarse grid setting is
-used, to make it easier to count. It makes sense to define axes over a broad
-expanse of the plot, so that mouse-click errors are made smaller, relative to
-the domain size.  The axes can be seen with the blue guiding lines.
+Magenta lines and labels indicate the specified coordinate system, and dotted
+blue lines are a grid that (sometimes) can be useful in guiding the eye.
 
-At the stage of the snapshot, 10 data points have been clicked, and are visible
-as red dots. Any point clicked in error can be eliminated by clicking the Undo
-button, which removes the most recently added point. (Actually, Undo will
-remove all the points, if the user clicks enough, but it a good idea to keep a
-close eye on the digitized points, so that only single-point corrections will
-be required.)
+Any point clicked in error can be eliminated by clicking the **Undo** button,
+which removes the most recently added point. (Actually, **Undo** will remove
+all the points, if the user clicks enough, but it a good idea to keep a close
+eye on the digitized points, so that only single-point corrections will be
+required.)
 
+Clicking the **Save** button saves the results to a file, and clicking the
+**Code** button shows how to read that file and plot the digitized points.
+(Note that clicking the **Quit** button saves the file first.)
 
-![A sample screenshot showing the use of imageDigitizer on an image of a Right Whale.](screenshot.png)
+Various GUI elements permit controlling the look of the digitized points. These
+can be helpful in digitizing graphs that have points on them.  It is also worth
+nothing that open symbols can be a good choice, since they make it easier to
+check that the point was clicked appropriately.
+
+![A sample screenshot showing the use of imageDigitizer on an image of a Right Whale.](screenshotle.png)
 
 **References**
 
 Daoust, Pierre-Yves, Émilie L. Couture, Tonya Wimmer, and Laura Bourque.
 “Incident Report. North Atlantic Right Whale Mortality Event in the Gulf of St.
 Lawrence, 2017.” Canadian Wildlife Health Cooperative, Marine Animal Response
-Socieity, and Fisheries and Oceans Canada, 2018.
+Society, and Fisheries and Oceans Canada, 2018.
 http://publications.gc.ca/site/eng/9.850838/publication.html.
 

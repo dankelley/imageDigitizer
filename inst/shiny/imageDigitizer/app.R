@@ -22,17 +22,19 @@ version <- "0.1.6"
 keypressHelp <- "
 <i>Keystroke interpretation</i>
 <ul>
-<li> '<b>p</b>': toggle printing of debugging information to the R console
-<li> '<b>+</b>': zoom in, centred on mouse location [FIXME: implement this]
-<li> '<b>-</b>': zoom out [FIXME: implement this]
-<li> '<b>0</b>': unzoom [FIXME: implement this]
+<li> <b>p</b>: toggle printing of debugging information to the R console
+<li> <b>u</b>: remove the last-digitized point
+<li> <b>+</b>: zoom in, centred on mouse location [FIXME: implement this]
+<li> <b>-</b>: zoom out [FIXME: implement this]
+<li> <b>0</b>: unzoom [FIXME: implement this]
 </ul>
 "
 
 fileLoaded <- FALSE
 
 ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onInputChange("keypress", e.which); Shiny.onInputChange("keypressTrigger", Math.random()); });'),
-    style="margin-left:2ex",
+    #style="margin-left:2ex",
+    style="text-indent:1em; background:#e6f3ff",
     uiOutput(outputId="title"),
     uiOutput(outputId="loadFile"),
     uiOutput(outputId="grid"),
@@ -43,6 +45,7 @@ ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onI
     uiOutput(outputId="undoSaveCodeQuit"),
     uiOutput(outputId="chooseCexCol"),
     uiOutput(outputId="choosePch"),
+    uiOutput(outputId="showStatus"),
     uiOutput(outputId="showImage"))
 
 server <- function(input, output)
@@ -98,13 +101,30 @@ server <- function(input, output)
             insertUI("loadAFile", ui=fileInput("inputFile", h5("Input file"), accept=c("image/png")))
     })
 
+    output$showStatus <- renderUI({
+        msg <- " "
+        npts <- length(state$xdevice)
+        if (npts > 0L) {
+            msg <- paste0("Digitized ", npts, if (npts!=1L) " points" else " point")
+            if (!is.null(input$plotHover$x)) {
+                msg <- paste0(msg,
+                    sprintf(" | Hovering at %s=%.3g, %s=%.3g",
+                        state$xname,
+                        with(state$xaxis, user0+slope*(input$plotHover$x-device0)),
+                        state$yname,
+                        with(state$yaxis, user0+slope*(input$plotHover$y-device0))))
+            }
+        }
+        msg
+    })
+
     output$showImage <- renderUI({
         if (state$step > 1L)
-            fluidRow(plotOutput("plot", click="click", hover="plotHover", height=600))
+            fluidRow(plotOutput("plot", click="click", hover="plotHover", width="100%"))
     })
 
     output$grid <- renderUI({
-        if (state$step == 2L)
+        if (state$step > 1L)
             fluidRow(radioButtons("grid", label=h5("Grid"),
                     choices=c("None"="off", "Fine"="fine", "Medium"="medium", "Coarse"="coarse"),
                     selected="medium", inline=TRUE))
@@ -228,29 +248,34 @@ server <- function(input, output)
                 column(4, selectInput("cex", "Symbol Size", seq(0.5, 4, 0.5), selected=2)))
     })
 
+    undo <- function(n=1L)
+    {
+        if (n > 0L && length(state$xdevice) > (n-1L)) {
+            state$cex <- head(state$cex, -n)
+            state$col <- head(state$col, -n)
+            state$pch <- head(state$pch, -n)
+            state$x <- head(state$x, -n)
+            state$y <- head(state$y, -n)
+            state$xdevice <- head(state$xdevice, -n)
+            state$ydevice <- head(state$ydevice, -n)
+        }
+    }
+
     #' @importFrom utils head
     observeEvent(input$undoButton, {
-        if (length(state$xdevice) > 0) {
-            state$cex <- head(state$cex, -1)
-            state$col <- head(state$col, -1)
-            state$pch <- head(state$pch, -1)
-            state$x <- head(state$x, -1)
-            state$y <- head(state$y, -1)
-            state$xdevice <- head(state$xdevice, -1)
-            state$ydevice <- head(state$ydevice, -1)
-        }
+        undo()
     })
 
     observeEvent(input$saveButton, {
         name <- saveFile()
-        showNotification(paste0("File '", name, "' saved"), type="message", duration=5)
+        showNotification(paste0("File '", name, "' saved"), type="message", duration=3)
     })
 
     observeEvent(input$codeButton, {
         ofile <- paste(gsub(".png$", "", state$inputFile$name), "_imageDigitizer.dat", sep="")
         msg <- "# Sample code to read and plot the saved data file<br>\n"
         msg <- paste0(msg, "data <- read.csv(file=\"~/", ofile, "\", skip=9, header=TRUE)<br>\n")
-        msg <- paste0(msg, "plot(", "data[[\"", state$xname, "\"]],", "data[[\"", state$yname, "\"]],", "xlab=\"", state$xname, "\",", "ylab=\"", state$yname, "\",", ", cex=data$cex, pch=data$pch, col=data$col)<br>\n")
+        msg <- paste0(msg, "plot(", "data[[\"", state$xname, "\"]],", "data[[\"", state$yname, "\"]],", "xlab=\"", state$xname, "\",", "ylab=\"", state$yname, "\",", "cex=data$cex, pch=data$pch,col=data$col)<br>\n")
         showModal(modalDialog(HTML(msg), title="R code", size="l"))
     })
 
@@ -264,12 +289,15 @@ server <- function(input, output)
         if (key == 'd') {
             debugFlag <<- !debugFlag
         } else if (state$step > 3L) {
+            dmsg("clicked '", key, "'\n")
             if (key == 'd') {
                 debugFlag <- !debugFlag
                 cat(file=stderr(), "now, debugFlag=", debugFlag, "\n")
             }
         } else if (state$step == 10L) { # Don't allow zooming until scales are defined.  FIXME: relax this?
-            if (key == '+') {
+            if (key == 'u') {
+                undo(2L)               # FIXME: does 2 work?
+            } else if (key == '+') {
                 dmsg("FIXME: should zoom in now\n")
             } else if (key == '-') {
                 dmsg("FIXME: should zoom out now\n")
@@ -285,20 +313,8 @@ server <- function(input, output)
         msg <- paste0("imageDigitizer ", version)
         if (!is.null(state$inputFile)) {
             msg <- paste0(msg, " | File '", state$inputFile$name, "'")
-            if (state$step < 10) {
+            if (state$step < 10L)
                 msg <- paste0(msg, " | Step ", state$step, " (", stepMeanings[state$step], ")")
-            } else {
-                npts <- length(state$xdevice)
-                msg <- paste0(msg, " | Digitized ", npts, if (npts!=1L) " points" else " point")
-                if (!is.null(input$plotHover$x)) {
-                    msg <- paste0(msg,
-                        sprintf(" | Hover: %s=%.3g, %s=%.3g",
-                            state$xname,
-                            with(state$xaxis, user0+slope*(input$plotHover$x-device0)),
-                            state$yname,
-                            with(state$yaxis, user0+slope*(input$plotHover$y-device0))))
-                }
-            }
         }
         return(msg)
     })
