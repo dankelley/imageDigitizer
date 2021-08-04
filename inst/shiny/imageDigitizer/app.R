@@ -43,8 +43,8 @@ ui <- fluidPage(tags$script('$(document).on("keypress", function (e) { Shiny.onI
     uiOutput(outputId="enterXLimits"),
     uiOutput(outputId="enterYLimits"),
     uiOutput(outputId="undoSaveCodeQuit"),
-    uiOutput(outputId="chooseCexCol"),
-    uiOutput(outputId="choosePch"),
+    uiOutput(outputId="customizeSymbols"),
+    #uiOutput(outputId="choosePch"),
     uiOutput(outputId="showStatus"),
     uiOutput(outputId="showImage"))
 
@@ -243,11 +243,17 @@ server <- function(input, output)
     })
 
     #' @importFrom colourpicker colourInput
-    output$chooseCexCol <- renderUI({
+    output$customizeSymbols <- renderUI({
         if (state$step == 10L)
             fluidRow(
-                column(4, colourpicker::colourInput("col", "Symbol Colour", "#B632C7", allowTransparent=TRUE)),
-                column(4, selectInput("cex", "Symbol Size", seq(0.5, 4, 0.5), selected=2)))
+                column(3, colourpicker::colourInput("col", "Symbol Colour", "#B632C7", allowTransparent=TRUE)),
+                column(2, selectInput("cex", "Symbol Size", seq(0.5, 4, 0.5), selected=2)),
+                column(2, selectInput("pch", "Symbol Code", seq(0L, 25L), selected=5)),
+                column(2, fluidRow(actionButton("symbolHelp", "Help"))))
+    })
+
+    observeEvent(input$symbolHelp, {
+        showModal(modalDialog(img(src="/pch_choices.png"), title="Symbol Codes", size="m", easyClose=TRUE))
     })
 
     undo <- function(n=1L)
@@ -350,19 +356,14 @@ server <- function(input, output)
                 I <- image_rotate(I, state$rotate)
             }
             rasterImage(I, 1, 1, idim[2], idim[3], interpolate=FALSE)
-            # We fiddle with the range in the abline() calls because otherwise
-            # the edges might not show, depending on the aspect ratio of the diagram.
-            # This is a consequence of how plot(asp) works.
-            dg <- as.integer(1L + min(idim[2:3])/25)
-            if (input$grid == "fine") {
-                abline(h=seq(-5*dg, idim[3]+5*dg, dg), col=col$grid, lty="dotted")
-                abline(v=seq(-5*dg, idim[2]+5*dg, dg), col=col$grid, lty="dotted")
-            } else if (input$grid == "medium") {
-                abline(h=seq(-5*dg, idim[3]+5*dg, 2*dg), col=col$grid, lty="dotted")
-                abline(v=seq(-5*dg, idim[2]+5*dg, 2*dg), col=col$grid, lty="dotted")
-            } else if (input$grid == "coarse") {
-                abline(h=seq(-5*dg, idim[3]+5*dg, 3*dg), col=col$grid, lty="dotted")
-                abline(v=seq(-5*dg, idim[2]+5*dg, 3*dg), col=col$grid, lty="dotted")
+            # Draw guiding grid.
+            if (input$grid != "off") {
+                dg <- as.integer(1L + min(idim[2:3])/25) * switch(input$grid, fine=1, medium=2, coarse=5)
+                usr <- par("usr")
+                for (xg in seq(usr[1], usr[2], dg))
+                    lines(rep(xg, 2), usr[2:3], col=col$grid, lty="dotted")
+                for (yg in seq(usr[3], usr[4], dg))
+                    lines(usr[1:2], rep(yg, 2), col=col$grid, lty="dotted")
             }
             for (i in seq_along(state$xaxis$user)) {
                 if (is.finite(state$xaxis$user[i]) && is.finite(state$xaxis$device[i])) {
