@@ -15,7 +15,7 @@ Suggests: knitr, rmarkdown
 NeedsCompilation: no
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
-Imports: colourpicker, png
+Imports: colourpicker
 BuildVignettes: true
 VignetteBuilder: knitr
 URL: https://dankelley.github.io/imageDigitizer/

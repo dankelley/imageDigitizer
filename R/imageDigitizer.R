@@ -9,11 +9,11 @@
 #' @importFrom shiny runApp
 #' @importFrom magick image_rotate image_shear
 #' @importFrom fs path_home
-imageDigitizer <- function()
-{
-    dir <- system.file("shiny", "imageDigitizer/app.R", package="imageDigitizer")
-    if (!nchar(dir))
-        stop("The app could not be located.", call.=FALSE)
-    runApp(dir, display.mode="normal")
+#' @importFrom colourpicker colourInput
+imageDigitizer <- function() {
+    dir <- system.file("shiny", "imageDigitizer/app.R", package = "imageDigitizer")
+    if (!nchar(dir)) {
+        stop("The app could not be located.", call. = FALSE)
+    }
+    runApp(dir, display.mode = "normal")
 }
-
