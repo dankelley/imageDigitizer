@@ -1,12 +1,12 @@
 Package: imageDigitizer
 Type: Package
 Title: Mouse-Based Image Digitizer
-Version: 0.1.6
-Date: 2021-08-01
+Version: 0.1.7
+Date: 2025-02-06
 Authors@R: c(
     person(given="Dan", family="Kelley", email="Dan.Kelley@Dal.Ca", role=c("aut", "cre"), comment=c(ORCID="https://orcid.org/0000-0001-7808-5911")))
 Maintainer: Dan Kelley <Dan.Kelley@Dal.Ca>
-Depends: R (>= 2.15), fs, magick, shiny
+Depends: R (>= 4.1.0), fs, magick, shiny
 License: GPL (>= 2)
 BugReports: https://github.com/dankelley/imageDigitizer/issues
 Description: An R shiny app to digitize points in an image, using mouse clicks.
